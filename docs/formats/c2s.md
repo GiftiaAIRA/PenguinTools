@@ -27,7 +27,7 @@ Air arrows (`AIR` / `AUL` / `AUR` / `ADW` / `ADL` / `ADR`) are not in that categ
 
 - **Measure / Offset** — placement in chart ticks (`RESOLUTION`, usually 384 per measure).
 - **Cell** — leftmost column (0–15; `1.14.00+` may use values outside that range).
-- **Width** — columns occupied, clamped to 1–16 before matching paths and AIR parents. Extended lane bounds are applied after those relationships are established.
+- **Width** — columns occupied, normally 1–16. PenguinTools also retains zero-width SLIDE/AIR-SLIDE path nodes produced by editor curve clipping, including in path and AIR continuation matching. This preserves editor/player interchange; game playback of such zero-width paths is not established. Extended lane bounds are applied after relationships are established.
 
 ## TAP
 

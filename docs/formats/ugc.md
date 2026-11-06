@@ -119,7 +119,7 @@ AIR-CRUSH axis `a` is `N` (default X), `Y`, or `Z`. `{interval}` is a decimal pl
 
 ## Effects, directions, and colors
 
-EXTAP effects are `U` Up, `D` Down, `C` Center, `A` Clockwise, `W` Counterclockwise, `L` Left, `R` Right, and `I` In/Out.
+EXTAP effects are `U` Up, `D` Down, `C` Center, `A` Counterclockwise, `W` Clockwise, `L` Left, `R` Right, and `I` In/Out.
 
 An EXTAP fully covering a HOLD or SLIDE head sets its EX effect, including when the EXTAP is wider than the head. The official format has no explicit-note/carrier role flag.
 

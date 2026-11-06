@@ -17,9 +17,12 @@ Use command-specific `--help` for the full parameter list. For scripts, invoke t
 ```powershell
 & $cli chart inspect .\charts\sample.ugc
 & $cli chart convert .\charts\sample.ugc .\out\sample.c2s --no-progress
+& $cli chart convert .\charts\sample.c2s .\out\sample.mgxc --editor-target legacy
 ```
 
 Inspection fully parses the chart and reports metadata and diagnostics. Conversion writes the requested output file; its extension selects the output format. See [chart conversion](chart-conversion.md) for supported formats, timing, and round-trip behavior.
+
+For editor output, `--editor-target` selects `legacy` (Margrete 1.8), `standard` (Margrete 1.9), or `extended` (the default, retaining supported extensions). Input interpretation remains automatic. This option does not change the C2S format or its 384-tick resolution. Unsupported target features stop export before replacing the destination.
 
 ### Scan and build an option
 

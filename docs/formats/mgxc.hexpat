@@ -8,7 +8,7 @@ struct Field {
     s16 type;
 
     if (type == 0x04) {
-        s16 attr;
+        u16 attr;
         char data[attr];
     }
     if (type == 0x03) {

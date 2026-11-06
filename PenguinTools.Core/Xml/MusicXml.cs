@@ -38,7 +38,7 @@ public class MusicXml : XmlElement
             main.Genre ?? new Entry(GenreDefaults.CustomDefaultId, GenreDefaults.CustomDefaultName)
         };
         JaketFile = $"CHU_UI_Jacket_{songId:0000}.dds";
-        EnableUltima = main.Difficulty == Difficulty.Ultima;
+        EnableUltima = metaMap.TryGetValue(Difficulty.Ultima, out var ultima) && ultima is not null;
         ReleaseDate = main.ReleaseDate.ToString("yyyyMMdd", CultureInfo.InvariantCulture);
         CueFileName = new Entry(songId, $"music{songId:0000}");
         WorldsEndTagName = main.WeTag;
@@ -56,7 +56,9 @@ public class MusicXml : XmlElement
                 Enable = curr != null,
                 File = $"{songId:0000}_{(int)diff:00}.c2s",
                 Level = whole,
-                LevelDecimal = frac
+                LevelDecimal = frac,
+                NotesDesigner = curr?.Designer ?? string.Empty,
+                DefaultBpm = curr is null ? 0 : curr.MainBpm > 0 ? curr.MainBpm : curr.BgmInitialBpm
             };
 
             Fumens.Add(fumen);
