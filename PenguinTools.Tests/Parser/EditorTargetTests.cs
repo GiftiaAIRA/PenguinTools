@@ -370,51 +370,6 @@ public sealed class EditorTargetTests
     }
 
     [Theory]
-    [InlineData("sG40", "c80", "sK4", true, EditorTarget.Standard)]
-    [InlineData("SG428N", "c8028", "sK428", true, EditorTarget.Standard)]
-    [InlineData("sG40", "c80", "sK4", false, EditorTarget.Extended)]
-    [InlineData("SG428N", "c8028", "sK428", false, EditorTarget.Extended)]
-    [InlineData("sG40", "c80", "sK4", true, EditorTarget.Extended)]
-    [InlineData("SG428N", "c8028", "sK428", true, EditorTarget.Extended)]
-    public async Task ClippedControls_RetainZeroWidthAcrossThreeC2sCycles(
-        string head, string control, string end, bool ugc, EditorTarget target)
-    {
-        var input = TestTempPaths.Create(".ugc");
-        var output = TestTempPaths.Create(ugc ? ".ugc" : ".mgxc");
-        var c2s = TestTempPaths.Create(".c2s");
-        try
-        {
-            await File.WriteAllTextAsync(input,
-                $"@VER\t9\n@FLAG\tHIPRECISION\tTRUE\n@FLAG\tSOFFSET\tFALSE\n" +
-                $"@FLAG\tEXFIELD\tTRUE\n@TICKS\t480\n@BPM\t0'0\t120\n@BEAT\t0\t4\t4\n" +
-                $"#1'0:tG4\n#1'0:{head}\n#480>{control}\n#960>{end}\n", Ct);
-            var chart = await Read(input);
-            var expected = await WriteC2s(c2s, chart);
-            for (var round = 0; round < 3; round++)
-            {
-                var parsed = await new C2SParser(new(c2s)).ParseAsync(Ct);
-                Assert.True(parsed.Succeeded, parsed.ToString());
-                var reverse = new UgcChartConverter(new(parsed.Value!)).Convert();
-                Assert.True(reverse.Succeeded, reverse.ToString());
-                var written = ugc ? await new UgcChartWriter(output, reverse.Value!, target).WriteAsync(Ct)
-                    : await new MgxcChartWriter(new(output, reverse.Value!, target)).WriteAsync(Ct);
-                Assert.True(written.Succeeded, written.ToString());
-                Assert.Equal(ugc && target == EditorTarget.Standard ? 1 : 0,
-                    written.Diagnostics.Diagnostics.Count(d => d.Message.Key == MsgKeys.Warn_Editor_clipped_control_save));
-                var reloaded = await Read(output);
-                var root = Assert.Single(reloaded.Notes.Children, n => n is U.Slide or U.AirSlide);
-                Assert.Equal(2, root.Children.Count);
-                Assert.Equal(960, root.LastChild!.Tick.Original - root.Tick.Original);
-                Assert.Equal(0, root.FirstChild!.Width);
-                Assert.Equal(-8, root.FirstChild.Lane);
-                Assert.Equal(4, root.LastChild!.Width);
-                Assert.Equal(Records(expected), Records(await WriteC2s(c2s, reloaded)));
-            }
-        }
-        finally { File.Delete(input); File.Delete(output); File.Delete(c2s); }
-    }
-
-    [Theory]
     [InlineData(EditorTarget.Legacy, false, Joint.C)]
     [InlineData(EditorTarget.Standard, false, Joint.C)]
     [InlineData(EditorTarget.Legacy, false, Joint.D)]

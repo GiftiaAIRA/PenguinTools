@@ -340,7 +340,6 @@ public partial class C2SChartConverter
                 AssignSoflanTimelines();
             }
             ValidateLongNoteLengths();
-            NoteWidthRules.Validate(C2s);
 
             return ValidatePairings()
                 ? OperationResult<C2sModel.Chart>.Success(C2s).WithDiagnostics(Diagnostic)

@@ -25,6 +25,11 @@ public partial class C2SChartConverter
         };
 
         action?.Invoke(note);
+        note.Width = Math.Clamp(note.Width, 1, 16);
+        if (note is C2sModel.LongNote path)
+        {
+            path.EndWidth = Math.Clamp(path.EndWidth, 1, 16);
+        }
         Notes.Add(note);
         RegisterSoflanPoint(source);
 

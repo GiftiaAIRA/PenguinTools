@@ -4,7 +4,6 @@ using PenguinTools.Chart.Converter.ugc;
 using PenguinTools.Chart.Models;
 using PenguinTools.Chart.Parser.c2s;
 using PenguinTools.Core;
-using PenguinTools.Core.Diagnostic;
 using Xunit;
 using C = PenguinTools.Chart.Models.c2s;
 using U = PenguinTools.Chart.Models.umgr;
@@ -14,6 +13,8 @@ namespace PenguinTools.Tests.Parser;
 public sealed class C2sNativeGeometryTests
 {
     [Theory]
+    [InlineData(-1, 1)]
+    [InlineData(0, 1)]
     [InlineData(17, 16)]
     [InlineData(100, 16)]
     public async Task WidthIsClampedBeforeAirParentMatching(int raw, int width)
@@ -26,38 +27,21 @@ public sealed class C2sNativeGeometryTests
 
     [Theory]
     [InlineData("TAP 0 0 0 0")]
-    [InlineData("TAP 0 0 0 -1")]
-    [InlineData("CHR 0 0 0 0 UP")]
-    [InlineData("MNE 0 0 0 0")]
-    [InlineData("FLK 0 0 0 0 L")]
+    [InlineData("CHR 0 0 0 -1 UP")]
     [InlineData("HLD 0 0 0 0 96")]
     [InlineData("SLD 0 0 0 4 96 4 0 SLD")]
     [InlineData("SLC 0 0 0 4 96 4 -1 SLD")]
-    [InlineData("SXD 0 0 0 4 96 4 0 SLD UP")]
-    [InlineData("SLC 0 0 0 0 96 4 4 SLD")]
-    [InlineData("SXC 0 0 0 0 96 4 4 SLD UP")]
-    [InlineData("TAP 0 0 0 4\nAIR 0 0 0 0 TAP DEF")]
-    [InlineData("TAP 0 0 0 4\nASD 0 0 0 4 TAP 1 96 4 0 2 DEF")]
-    [InlineData("TAP 0 0 0 4\nASC 0 0 0 4 TAP 1 96 4 -1 2 DEF")]
-    [InlineData("ASC 0 0 0 0 ASC 1 96 4 4 2 DEF")]
-    [InlineData("TAP 0 0 0 4\nAHD 0 0 0 0 TAP 96 DEF")]
-    [InlineData("ALD 0 0 0 4 24 1 96 4 0 2 DEF")]
-    public async Task ZeroWidthPlayableNotes_AreWidenedWithAWarning(string body)
+    [InlineData("TAP 0 0 0 1\nAIR 0 0 0 0 TAP DEF")]
+    [InlineData("TAP 0 0 0 4\nASC 0 0 0 4 TAP 1 96 4 0 2 DEF")]
+    [InlineData("ALD 0 0 0 4 24 1 96 4 -1 2 DEF")]
+    public async Task NonpositiveWidths_UseNativeMinimum(string body)
     {
-        var path = TestTempPaths.Create(".c2s");
-        var ct = TestContext.Current.CancellationToken;
-        try
-        {
-            await File.WriteAllTextAsync(path, "VERSION 1.15.00 1.15.00\nRESOLUTION 384\nBPM_DEF 120 120 120 120\nMET_DEF 4 4\n" + body, ct);
-            var parsed = await new C2SParser(new(path)).ParseAsync(ct);
-            Assert.True(parsed.Succeeded, parsed.ToString());
-            Assert.Contains(parsed.Diagnostics.Diagnostics, d => d.Message.Key == MsgKeys.Warn_Note_width_adjusted);
-            Assert.DoesNotContain(parsed.Diagnostics.Diagnostics, d => d.Severity == Severity.Error);
-            Assert.All(parsed.Value!.Notes, n => Assert.True(n.Width >= 1, $"{n.GetType().Name} width {n.Width}"));
-            var editor = new UgcChartConverter(new(parsed.Value)).Convert();
-            Assert.True(editor.Succeeded, editor.ToString());
-        }
-        finally { File.Delete(path); }
+        var chart = await Parse(body);
+        Assert.All(chart.Notes, note => Assert.InRange(note.Width, 1, 16));
+        Assert.All(chart.Notes.OfType<C.LongNote>().Where(n => n is not C.Hold),
+            note => Assert.InRange(note.EndWidth, 1, 16));
+        var converted = new UgcChartConverter(new(chart)).Convert();
+        Assert.True(converted.Succeeded, converted.ToString());
     }
 
     [Fact]
@@ -87,7 +71,7 @@ public sealed class C2sNativeGeometryTests
     [InlineData("SLC", "SLD", "NCL")]
     [InlineData("SXC", "SXD", "SLD")]
     [InlineData("SXC", "SXD", "NCL")]
-    public async Task ZeroAndUnitWidthSlideTails_RemainDifferentPaths(string control, string end, string line)
+    public async Task ZeroAndUnitWidthSlideTails_UseNativeCreationOrder(string control, string end, string line)
     {
         var chart = await Parse($"""
             {control} 0 0 0 4 96 4 0 {line} UP
@@ -100,18 +84,18 @@ public sealed class C2sNativeGeometryTests
         var paths = C2sSlidePaths.Build(chart.Notes.OfType<C.Slide>()).ToArray();
         Assert.Equal(2, paths.Length);
         Assert.All(paths, path => Assert.Equal(2, path.Length));
-        Assert.Equal([0, 8], paths.Select(path => path[^1].EndLane));
+        Assert.Equal([8, 0], paths.Select(path => path[^1].EndLane));
         var converted = new UgcChartConverter(new(chart)).Convert();
         Assert.True(converted.Succeeded, converted.ToString());
         var roots = converted.Value!.Notes.Children.OfType<U.Slide>().ToArray();
-        Assert.Equal([0, 1], roots.Select(n => n.FirstChild!.Width));
-        Assert.Equal([0, 8], roots.Select(n => n.LastChild!.Lane));
+        Assert.Equal([1, 1], roots.Select(n => n.FirstChild!.Width));
+        Assert.Equal([8, 0], roots.Select(n => n.LastChild!.Lane));
         Assert.All(converted.Value.Notes.Children.OfType<U.Air>(), air =>
-            Assert.Equal(air.Lane, Assert.IsType<U.SlideJoint>(air.PairNote).Parent!.Lane));
+            Assert.Equal(8 - air.Lane, Assert.IsType<U.SlideJoint>(air.PairNote).Parent!.Lane));
     }
 
     [Fact]
-    public async Task ZeroAndUnitWidthAirSlideTails_RetainTheirParents()
+    public async Task ZeroAndUnitWidthAirSlideTails_UseNativeCreationOrder()
     {
         var chart = await Parse("""
             TAP 0 0 0 4
@@ -122,15 +106,15 @@ public sealed class C2sNativeGeometryTests
             ASD 0 96 4 0 ASC 5 96 0 4 5 DEF
             """);
         var segments = chart.Notes.OfType<C.AirSlide>().ToArray();
-        Assert.Same(segments[0], segments[3].Parent);
-        Assert.Same(segments[1], segments[2].Parent);
+        Assert.Same(segments[0], segments[2].Parent);
+        Assert.Same(segments[1], segments[3].Parent);
         var converted = new UgcChartConverter(new(chart)).Convert();
         Assert.True(converted.Succeeded, converted.ToString());
         var roots = converted.Value!.Notes.Children.OfType<U.AirSlide>().ToArray();
-        Assert.Equal([0, 1], roots.Select(n => n.FirstChild!.Width));
-        Assert.Equal([0, 8], roots.Select(n => n.LastChild!.Lane));
+        Assert.Equal([1, 1], roots.Select(n => n.FirstChild!.Width));
+        Assert.Equal([8, 0], roots.Select(n => n.LastChild!.Lane));
         Assert.Equal([4, 4], roots.Select(n => n.LastChild!.Width));
-        Assert.All(roots, n => Assert.Equal(n.PairNote!.Lane, n.LastChild!.Lane));
+        Assert.All(roots, n => Assert.Equal(8 - n.PairNote!.Lane, n.LastChild!.Lane));
     }
 
     [Theory]

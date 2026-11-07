@@ -34,7 +34,6 @@ public partial class C2SChartWriter
         try
         {
             CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
-            NoteWidthRules.Validate(Chart);
             Resolution = Chart.Extras.SerializationResolution(Chart);
             var sb = new StringBuilder();
             AppendHeaders(sb);

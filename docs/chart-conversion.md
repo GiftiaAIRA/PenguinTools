@@ -35,7 +35,7 @@ MGXC and UGC inputs use the official semantics of their declared versions, inclu
 
 MGXC heights use `HSCL` (default 1) to convert to internal tenths. MGXC v4 limits rescaled heights to 0–360 when `HSCL` differs from 10, matching Margrete; its usual `HSCL=10` representation retains larger heights. Nonpositive, nonfinite, or unrepresentable scales fail with `diag.mgcrit.invalid_height_scale`.
 
-Notes narrower than one lane are widened to one lane with `diag.warn.note_width_adjusted`; zero-width SLIDE and AIR-SLIDE clipping points are kept.
+C2S widths are normalized to 1–16 before paths and AIR parents are matched, so zero-width clipping points become one lane wide. In MGXC and UGC input, notes narrower than one lane are widened with `diag.warn.note_width_adjusted`; zero-width SLIDE and AIR-SLIDE clipping points are kept.
 
 C2S `ASO`, `HHD`, and `HHX` objects are not supported. They are skipped with `diag.c2s.unsupported_note_type` warnings; conversion continues with the remaining objects.
 

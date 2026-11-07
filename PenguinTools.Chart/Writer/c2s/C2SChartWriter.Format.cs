@@ -51,7 +51,7 @@ public partial class C2SChartWriter
                 error = null;
                 return true;
             case C2sModel.Slide slide:
-                line = $"{FormatNote(slide)}\t{ScaleLength(slide)}\t{slide.EndLane}\t{slide.EndWidth}";
+                line = $"{FormatNote(slide)}\t{ScaleLength(slide)}\t{slide.EndLane}\t{Math.Clamp(slide.EndWidth, 1, 16)}";
                 line += slide.NoLine ? "\tNCL" : "\tSLD";
                 line += FormatEffect(slide.Effect);
                 error = null;
@@ -66,7 +66,7 @@ public partial class C2SChartWriter
                 return true;
             case C2sModel.AirSlide { Parent: { } parent } airSlide:
                 line =
-                    $"{FormatNote(airSlide)}\t{ParentId(parent)}\t{airSlide.Height.Result}\t{ScaleLength(airSlide)}\t{airSlide.EndLane}\t{airSlide.EndWidth}\t{airSlide.EndHeight.Result}\t{airSlide.Color}";
+                    $"{FormatNote(airSlide)}\t{ParentId(parent)}\t{airSlide.Height.Result}\t{ScaleLength(airSlide)}\t{airSlide.EndLane}\t{Math.Clamp(airSlide.EndWidth, 1, 16)}\t{airSlide.EndHeight.Result}\t{airSlide.Color}";
                 error = null;
                 return true;
             case C2sModel.AirSlide { Parent: null }:
@@ -80,7 +80,7 @@ public partial class C2SChartWriter
                 return true;
             case C2sModel.AirCrash airCrash:
                 line =
-                    $"{FormatNote(airCrash)}\t{Scale(airCrash.Density)}\t{airCrash.Height.Result}\t{ScaleLength(airCrash)}\t{airCrash.EndLane}\t{airCrash.EndWidth}\t{airCrash.EndHeight.Result}\t{airCrash.Color}";
+                    $"{FormatNote(airCrash)}\t{Scale(airCrash.Density)}\t{airCrash.Height.Result}\t{ScaleLength(airCrash)}\t{airCrash.EndLane}\t{Math.Clamp(airCrash.EndWidth, 1, 16)}\t{airCrash.EndHeight.Result}\t{airCrash.Color}";
                 line += $"\t{airCrash.Attr}";
                 error = null;
                 return true;
@@ -118,7 +118,7 @@ public partial class C2SChartWriter
 
     private string FormatNote(C2sModel.Note note)
     {
-        return $"{FormatNode(note)}\t{note.Lane}\t{note.Width}";
+        return $"{FormatNode(note)}\t{note.Lane}\t{Math.Clamp(note.Width, 1, 16)}";
     }
 
     private static string FormatEffect(ExEffect? effect)

@@ -101,7 +101,6 @@ public sealed class C2SParser
         C2s.Extras.CaptureClock(C2s);
         C2s.Extras.SourceMetaKey = ChartExtras.MetaKey(C2s);
         ResolvePairings();
-        _sourceGameplayChanged |= NoteWidthRules.Widen(C2s, Diagnostic);
         var diagnostics = DiagnosticSnapshot.Create(Diagnostic);
         if (!diagnostics.HasError)
         {
@@ -727,7 +726,7 @@ public sealed class C2SParser
 
     private void ParseSlide(string[] tokens, int lineNumber)
     {
-        if (!TryParseNoteBase(tokens, lineNumber, out var noteBase, allowZeroWidth: true) ||
+        if (!TryParseNoteBase(tokens, lineNumber, out var noteBase) ||
             !TryGetInt(tokens, 5, lineNumber, "SLIDE length", out var length) ||
             !TryGetInt(tokens, 6, lineNumber, "SLIDE end lane", out var endLane))
         {
@@ -755,7 +754,7 @@ public sealed class C2SParser
             Width = noteBase.Width,
             EndTick = AddLength(noteBase.Tick, length),
             EndLane = endLane,
-            EndWidth = EndWidth(endWidth, lineNumber),
+            EndWidth = Math.Clamp(endWidth, 1, 16),
             Joint = type.EndsWith('C') ? Joint.C : Joint.D
         };
 
@@ -806,7 +805,7 @@ public sealed class C2SParser
 
     private void ParseAirSlide(string[] tokens, int lineNumber)
     {
-        if (!TryParseNoteBase(tokens, lineNumber, out var noteBase, allowZeroWidth: true) ||
+        if (!TryParseNoteBase(tokens, lineNumber, out var noteBase) ||
             !TryGetToken(tokens, 5, lineNumber, "AIR-SLIDE parent", out var parentId) ||
             !TryGetDecimal(tokens, 6, lineNumber, "AIR-SLIDE height", out var height) ||
             !TryGetInt(tokens, 7, lineNumber, "AIR-SLIDE length", out var length) ||
@@ -826,7 +825,7 @@ public sealed class C2SParser
             Height = ParseDisplayedHeight(height),
             EndTick = AddLength(noteBase.Tick, length),
             EndLane = endLane,
-            EndWidth = EndWidth(endWidth, lineNumber),
+            EndWidth = Math.Clamp(endWidth, 1, 16),
             EndHeight = ParseDisplayedHeight(endHeight)
         };
 
@@ -890,7 +889,7 @@ public sealed class C2SParser
             Height = ParseDisplayedHeight(height),
             EndTick = AddLength(noteBase.Tick, length),
             EndLane = endLane,
-            EndWidth = EndWidth(endWidth, lineNumber),
+            EndWidth = Math.Clamp(endWidth, 1, 16),
             EndHeight = ParseDisplayedHeight(endHeight)
         };
 
@@ -937,18 +936,7 @@ public sealed class C2SParser
         return true;
     }
 
-    private int EndWidth(int endWidth, int lineNumber)
-    {
-        if (endWidth >= 0)
-        {
-            return Math.Min(endWidth, 16);
-        }
-        _sourceGameplayChanged = true;
-        ReportAtLine(Severity.Warning, Msg.Create(MsgKeys.Warn_Note_width_adjusted, endWidth), lineNumber);
-        return 1;
-    }
-
-    private bool TryParseNoteBase(string[] tokens, int lineNumber, out NoteBase noteBase, bool allowZeroWidth = false)
+    private bool TryParseNoteBase(string[] tokens, int lineNumber, out NoteBase noteBase)
     {
         noteBase = default;
         if (!TryParseNode(tokens, lineNumber, out var tick) ||
@@ -958,16 +946,8 @@ public sealed class C2SParser
             return false;
         }
 
-        if (width <= 0 && !(allowZeroWidth && width == 0))
-        {
-            // Earlier releases widened these notes to one lane; keep converting the chart.
-            _sourceGameplayChanged = true;
-            ReportAtLine(Severity.Warning, Msg.Create(MsgKeys.Warn_Note_width_adjusted, width), lineNumber);
-            width = 1;
-        }
-        // Zero is provisional until resolved paths prove it continues a native
-        // nonjudging clipped control rather than starting a playable note.
-        noteBase = new NoteBase(tick, lane, Math.Clamp(width, allowZeroWidth ? 0 : 1, 16));
+        // C2S normalizes widths before matching paths and AIR parents.
+        noteBase = new NoteBase(tick, lane, Math.Clamp(width, 1, 16));
         return true;
     }
 
