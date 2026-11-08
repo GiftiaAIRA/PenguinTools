@@ -154,7 +154,6 @@
         "number_adjusted": "数值已调整",
         "note_width_adjusted": "音符宽度已调整",
         "editor_curves_sampled": "曲线已转为节点",
-        "editor_clipped_control_save": "裁剪点可能被改宽",
         "c2s_segmented_slide_judgements": "SLIDE 会被拆分",
         "ugc_air_hold_controls": "AIR-HOLD 判定数可能变化",
         "ugc_legacy_air_hold_normalized": "已修正旧版 AIR-HOLD",
@@ -302,7 +301,6 @@
     },
     "warn": {
       "editor_curves_sampled": "曲线已转为普通节点，输出文件中无法再编辑控制点。",
-      "editor_clipped_control_save": "UGC 保留了宽度为 0 的裁剪点。原版 Margrete 另存为 MGXC 后，可能变成宽度 1。",
       "editor_approximation": "输出 {0} 时，已将 {1} 从 {2} 调整为 {3}。",
       "chart_metadata_only": "仅获取了 {0} v{1} 的谱面基本信息。",
       "chart_skipped_version": "已跳过 {0} v{1}，最高支持 v{2}。",

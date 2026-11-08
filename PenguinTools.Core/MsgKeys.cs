@@ -120,7 +120,6 @@ public static class MsgKeys
     public const string MgCrit_Editor_target_feature = "diag.mgcrit.editor_target_feature";
     public const string MgCrit_Invalid_note_width = "diag.mgcrit.invalid_note_width";
     public const string Warn_Editor_curves_sampled = "diag.warn.editor_curves_sampled";
-    public const string Warn_Editor_clipped_control_save = "diag.warn.editor_clipped_control_save";
     public const string MgCrit_Unsupported_legacy_curve = "diag.mgcrit.unsupported_legacy_curve";
     public const string Sus_Air_hold_ignored = "diag.sus.air_hold_ignored";
     public const string Sus_Air_hold_joint_ignored = "diag.sus.air_hold_joint_ignored";

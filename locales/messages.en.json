@@ -154,7 +154,6 @@
         "number_adjusted": "Number adjusted to a supported value",
         "note_width_adjusted": "Note width adjusted",
         "editor_curves_sampled": "Curves converted to points",
-        "editor_clipped_control_save": "Clipping points may widen",
         "c2s_segmented_slide_judgements": "SLIDE will be split",
         "ugc_air_hold_controls": "AIR-HOLD count may change",
         "ugc_legacy_air_hold_normalized": "Old AIR-HOLD fixed",
@@ -302,7 +301,6 @@
     },
     "warn": {
       "editor_curves_sampled": "Curves were converted to plain points; their handles can't be edited in the output.",
-      "editor_clipped_control_save": "The UGC keeps zero-width clipping points. Saving it as MGXC in original Margrete may widen them to 1.",
       "editor_approximation": "In the {0} file, {1} was changed from {2} to {3}.",
       "chart_metadata_only": "Only basic chart information was read from {0} v{1}.",
       "chart_skipped_version": "This chart uses {0} v{1} and was skipped. Versions up to v{2} are supported.",

@@ -157,11 +157,6 @@ internal static class EditorTargetRules
         {
             Require(false, "notes fully outside lanes 0–16", outside.Tick.Original);
         }
-        if (ugc && target == EditorTarget.Standard && chart.Notes.Children
-                .SelectMany(n => n.Children).Any(n => n.Width == 0 && NoteWidthRules.IsClippedControl(n)))
-        {
-            diagnostics.Report(new Diagnostic(Severity.Warning, Msg.Key(MsgKeys.Warn_Editor_clipped_control_save)));
-        }
         if (target == EditorTarget.Legacy)
         {
             chart.Meta.ExtendedField = false;
