@@ -21,6 +21,12 @@ Use command-specific `--help` for the full parameter list. For scripts, invoke t
 
 Inspection fully parses the chart and reports metadata and diagnostics. Conversion writes the requested output file; its extension selects the output format. See [chart conversion](chart-conversion.md) for supported formats, timing, and round-trip behavior.
 
+For MGXC and UGC output, `--editor-target` selects the editor that must open the file: `auto` (default), `legacy` (Margrete 1.8), `standard` (Margrete 1.9), or `extended`. See [editor targets](chart-conversion.md#editor-targets).
+
+```powershell
+& $cli chart convert .\charts\sample.c2s .\out\sample.mgxc --editor-target standard
+```
+
 ### Scan and build an option
 
 ```powershell
@@ -41,7 +47,7 @@ Discovery order chooses the preferred format when a song ID and difficulty occur
 & $cli audio extract .\game\cueFile\music1234.acb .\wav
 ```
 
-Music extraction reads the chart paths in `Music.xml` and writes under `extracted/<song ID>/`. Its default chart format is MGXC; `--chart-format ugc` selects UGC. `--no-audio` and `--no-jacket` skip those media outputs. To include them, omit those flags and provide accessible media, using `--acb`, `--awb`, or `--jacket` when discovery needs an explicit path. Extracted jackets are sRGB PNGs; raster overrides such as JPEG are decoded and converted with orientation, dimensions, and transparency preserved. Standalone audio extraction writes decoded WAV files to its output directory.
+Music extraction reads the chart paths in `Music.xml` and writes under `extracted/<song ID>/`. Its default chart format is MGXC; `--chart-format ugc` selects UGC. Extracted charts use the `auto` [editor target](chart-conversion.md#editor-targets), which is the extended format for C2S input. `--no-audio` and `--no-jacket` skip those media outputs. To include them, omit those flags and provide accessible media, using `--acb`, `--awb`, or `--jacket` when discovery needs an explicit path. Extracted jackets are sRGB PNGs; raster overrides such as JPEG are decoded and converted with orientation, dimensions, and transparency preserved. Standalone audio extraction writes decoded WAV files to its output directory.
 
 ### Use an additional asset catalog
 

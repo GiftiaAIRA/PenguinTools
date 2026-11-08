@@ -9,7 +9,21 @@ PenguinTools conversion behavior and compatibility rules. See [CLI usage](cli.md
 | MGXC, UGC, SUS | MGXC, UGC, C2S |
 | C2S | MGXC, UGC |
 
-Editor output uses MGXC v4 or UGC v9. MGXC versions above 4 and UGC versions above 9 fail with `diag.error.chart_version_too_new`; [option batches](cli.md#partial-option-batches) can continue with the supported inputs.
+MGXC versions above 4 and UGC versions above 9 fail with `diag.error.chart_version_too_new`; [option batches](cli.md#partial-option-batches) can continue with the supported inputs.
+
+### Editor targets
+
+MGXC and UGC output is written for one editor, selected with `--editor-target`:
+
+| Target | Editor | Output |
+| ------ | ------ | ------ |
+| `legacy` | Margrete 1.8 | MGXC v2 / UGC v8 |
+| `standard` | Margrete 1.9 | MGXC v4 / UGC v9 |
+| `extended` | Extended Margrete (2.3 and later) | MGXC v4 / UGC v9 with extension data and an extended marker |
+
+`auto`, the default, follows the input. MGXC and UGC input keeps the editor that wrote it unless the chart uses features that editor lacks; C2S and SUS input use `extended`. `auto` also switches to `extended` when the input editor's format cannot hold the chart in the requested output format, for example a directional AIR-HOLD written as UGC.
+
+`legacy` and `standard` refuse content their editor cannot hold, such as 0/x meters, custom AIR colors, or notes entirely outside lanes 0–16, and leave an existing output file unchanged.
 
 The format references describe the source specifications. Implementation coverage is determined by the parsers, writers, and their tests.
 
@@ -17,13 +31,15 @@ Use binary MGXC only. Do not use text MGXC: PenguinTools does not support it, an
 
 ## Input compatibility
 
-MGXC and UGC inputs use the official semantics of their declared versions, including older official versions.
+MGXC and UGC inputs use the official semantics of their declared versions, including older official versions. Files saved by extended Margrete releases are recognized by their creator line or extended marker and read with that editor's encodings.
 
 MGXC heights use `HSCL` (default 1) to convert to internal tenths. MGXC v4 limits rescaled heights to 0–360 when `HSCL` differs from 10, matching Margrete; its usual `HSCL=10` representation retains larger heights. Nonpositive, nonfinite, or unrepresentable scales fail with `diag.mgcrit.invalid_height_scale`.
 
+Notes narrower than one lane are widened to one lane with `diag.warn.note_width_adjusted`; zero-width SLIDE and AIR-SLIDE clipping points are kept.
+
 C2S `ASO`, `HHD`, and `HHX` objects are not supported. They are skipped with `diag.c2s.unsupported_note_type` warnings; conversion continues with the remaining objects.
 
-UGC output uses `HIPRECISION` (internal heights 0–1295) and silently clamps unencodable heights, keeping their originals in validated metadata.
+UGC output uses `HIPRECISION` (internal heights 0–1295) and silently clamps unencodable heights, keeping their originals in validated metadata. `legacy` and `standard` MGXC output clamp heights to 0–65535 the same way; `extended` MGXC stores signed 32-bit heights.
 
 UGC `SPDDEF`/`SPDFLD` relative note-speed definitions are retained when writing UGC and in MGXC metadata. Their playback effects are not reproduced by MGXC or C2S output; conversion reports `diag.warn.ugc_relative_speed_not_reproduced` when a non-default definition applies to a note. Unused definitions and lossless UGC saves do not produce this warning.
 
@@ -38,6 +54,8 @@ C2S files without `CLK_DEF` keep the metronome disabled during conversion.
 For an MGXC/UGC chart with `sofs`/`SOFFSET` enabled, audio export inserts one measure of silence. Its length uses the initial time signature, independently of the manual audio offset.
 
 C2S conversion shifts notes, long-note endpoints, speed intervals, and later tempo/meter events by that measure; the initial tempo and meter stay at tick zero. Speed intervals starting at zero remain active during the silence and extend to the shifted endpoint. Conversion diagnostic times refer to the source chart, before this shift; short-segment warnings are determined from the rounded C2S endpoints.
+
+`standard` and `extended` editor output stores such a chart with a fixed zero origin: notes and later events move one measure later, that measure is added to the audio offset, and SOFFSET is cleared. Playback timing does not change, and the original setting is kept in metadata. `legacy` output keeps SOFFSET.
 
 C2S imports retain their coordinates even after edits invalidate saved snapshots. The C2S coordinate origin is retained in MGXC/UGC round-trip metadata.
 
