@@ -213,7 +213,7 @@ public partial class MgxcParser
 
         EditorProjection.Restore(Mgxc);
         MargreteCurveMetadata.RestoreProfiles(Mgxc);
-        NoteWidthRules.Validate(Mgxc);
+        NoteWidthRules.Widen(Mgxc, Diagnostic);
         Mgxc.Extras.EditorFormatVersion = _version;
         Mgxc.Extras.SpeedModelKey = ChartExtras.SpeedKey(Mgxc);
         Mgxc.Extras.ParsedEventModelKey = C2SRoundTrip.OrderedViewHash(ChartExtras.EventView(Mgxc).Split('\n'));

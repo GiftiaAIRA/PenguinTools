@@ -299,11 +299,11 @@ public sealed class OfficialEditorFormatTests
     }
 
     [Theory]
-    [InlineData(false, -1)]
-    [InlineData(false, 65536)]
-    [InlineData(true, -1)]
-    [InlineData(true, 1296)]
-    public async Task UnencodableAirHeight_RejectsExportWithoutReplacingExistingFile(bool ugc, int height)
+    [InlineData(false, -1, 0)]
+    [InlineData(false, 65536, 65535)]
+    [InlineData(true, -1, 0)]
+    [InlineData(true, 1296, 1295)]
+    public async Task UnencodableAirHeight_ClampsSilentlyAndRetainsOriginalInMetadata(bool ugc, int height, int encoded)
     {
         var chart = Chart();
         var crash = new U.AirCrash { Tick = 480, Lane = 0, Width = 4, Height = 80 };
@@ -313,22 +313,29 @@ public sealed class OfficialEditorFormatTests
         var ct = TestContext.Current.CancellationToken;
         try
         {
-            await File.WriteAllTextAsync(path, "existing chart", ct);
+            // The extended MGXC layout stores signed heights exactly, so clamp in the 1.9 layout.
             var written = ugc ? await new UgcChartWriter(path, chart).WriteAsync(ct)
                 : await new MgxcChartWriter(new MgxcWriteRequest(path, chart, PenguinTools.Chart.EditorTarget.Standard)).WriteAsync(ct);
-            Assert.False(written.Succeeded);
-            Assert.Contains(written.Diagnostics.Diagnostics,
-                d => d.Message.Key == MsgKeys.MgCrit_Unrepresentable_height);
-            Assert.Equal("existing chart", await File.ReadAllTextAsync(path, ct));
-            Assert.Equal(height, Assert.IsType<U.AirCrashJoint>(crash.LastChild).Height);
+            Assert.True(written.Succeeded, written.ToString());
+            Assert.Empty(written.Diagnostics.Diagnostics);
+            if (ugc)
+            {
+                Assert.Contains($"#480>cK4{(encoded == 0 ? "00" : "ZZ")}", await File.ReadAllLinesAsync(path, ct));
+            }
+            else
+            {
+                Assert.Equal([80, encoded], MgxcHeights(await File.ReadAllBytesAsync(path, ct), 0x0A));
+            }
+            var restored = Assert.Single((await Read(path)).Notes.Children.OfType<U.AirCrash>());
+            Assert.Equal(height, Assert.IsType<U.AirCrashJoint>(restored.LastChild).Height);
         }
         finally { File.Delete(path); }
     }
 
     [Theory]
-    [InlineData(2000, true)]
-    [InlineData(3000, false)]
-    public async Task UgcHeightLimit_AppliesToSampledCurveInsteadOfItsHandle(int controlHeight, bool representable)
+    [InlineData(2000, 990, 1000)]
+    [InlineData(3000, 1295, 1295)]
+    public async Task UgcHeightLimit_AppliesToSampledCurveInsteadOfItsHandle(int controlHeight, int lowest, int highest)
     {
         var chart = Chart();
         var tap = new U.Tap { Tick = 0, Lane = 4, Width = 4 };
@@ -350,22 +357,15 @@ public sealed class OfficialEditorFormatTests
         var ct = TestContext.Current.CancellationToken;
         try
         {
-            await File.WriteAllTextAsync(path, "existing chart", ct);
             var written = await new UgcChartWriter(path, chart).WriteAsync(ct);
-            Assert.Equal(representable, written.Succeeded);
-            if (!representable)
-            {
-                Assert.Contains(written.Diagnostics.Diagnostics, d => d.Message.Key == MsgKeys.MgCrit_Unrepresentable_height);
-                Assert.Equal("existing chart", await File.ReadAllTextAsync(path, ct));
-                return;
-            }
+            Assert.True(written.Succeeded, written.ToString());
             // Check native geometry without the converter's restoration metadata.
             var lines = await File.ReadAllLinesAsync(path, ct);
             await File.WriteAllLinesAsync(path, lines.Where(l => !l.StartsWith("@COPYRIGHT", StringComparison.Ordinal)), ct);
             var parsed = Assert.Single((await Read(path)).Notes.Children.OfType<U.AirSlide>());
             var heights = parsed.Children.Cast<U.AirSlideJoint>().Select(n => n.Height).ToArray();
             Assert.All(heights, h => Assert.InRange(h, 0, 1295));
-            Assert.InRange(heights.Max(), 990, 1000);
+            Assert.InRange(heights.Max(), lowest, highest);
             Assert.Equal(controlHeight, Assert.IsType<U.AirSlideJoint>(air.FirstChild).Height);
         }
         finally { File.Delete(path); }

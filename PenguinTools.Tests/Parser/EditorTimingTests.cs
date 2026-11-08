@@ -269,7 +269,7 @@ public sealed class EditorTimingTests
     [InlineData(32768)]
     [InlineData(65535)]
     [InlineData(65536)]
-    public async Task MgxcHeight_RetainsUnsignedRangeAndRejectsOverflow(int height)
+    public async Task MgxcHeight_ClampsNativeValueAndRetainsOriginalInMetadata(int height)
     {
         var chart = await Parse("@FLAG\tHIPRECISION\tTRUE\n#0'0:C04280,240\n#240:c0428\n");
         var crash = Assert.Single(chart.Notes.Children.OfType<U.AirCrash>());
@@ -278,14 +278,9 @@ public sealed class EditorTimingTests
         var path = TestTempPaths.Create(".mgxc");
         try
         {
+            // The 1.9 layout stores unsigned 16-bit heights; larger values are clamped natively.
             var written = await new MgxcChartWriter(new MgxcWriteRequest(path, chart, PenguinTools.Chart.EditorTarget.Standard))
                 .WriteAsync(TestContext.Current.CancellationToken);
-            if (height > ushort.MaxValue)
-            {
-                Assert.False(written.Succeeded);
-                Assert.False(File.Exists(path));
-                return;
-            }
             Assert.True(written.Succeeded, written.ToString());
             var parsed = await new MgxcParser(new MgxcParseRequest(path, TestAssets.Load()), TestMediaTool.Instance)
                 .ParseAsync(TestContext.Current.CancellationToken);

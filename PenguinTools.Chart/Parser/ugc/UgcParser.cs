@@ -177,7 +177,7 @@ public partial class UgcParser
             }
             EditorProjection.Restore(Ugc, eligible, restoreEvents: contextValid);
             MargreteCurveMetadata.RestoreProfiles(Ugc);
-            NoteWidthRules.Validate(Ugc);
+            NoteWidthRules.Widen(Ugc, Diagnostic);
             Ugc.Extras.EditorFormatVersion = _version;
 
             Ugc.Extras.SpeedModelKey = ChartExtras.SpeedKey(Ugc);

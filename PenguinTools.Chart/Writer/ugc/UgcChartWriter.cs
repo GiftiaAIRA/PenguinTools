@@ -129,15 +129,7 @@ public sealed class UgcChartWriter(string path, U.Chart source, EditorTarget tar
             }
             CurveExpansion.Expand(_chart);
             EditorProjection.CaptureAirColorKeys(_chart);
-            try
-            {
-                EditorProjection.ValidateUgcHeights(_chart);
-            }
-            catch (DiagnosticException ex)
-            {
-                diagnostics.Report(ex.ToDiagnostic().WithPathFallback(path));
-                return OperationResult.Failure().WithDiagnostics(diagnostics);
-            }
+            EditorProjection.ClampUgcHeights(_chart);
             _chart.Extras.MgxcNoteSnapshots.Clear();
             _chart.Extras.FixedZeroOrigin |= _chart.Extras.UsesFixedCoordinateOrigin;
             _chart.Extras.EditorFieldColorName = _chart.Meta.FieldColorName;

@@ -101,7 +101,8 @@ public partial class UgcParser
         var w = Width(payload[2]);
         if (w <= 0)
         {
-            ThrowAtCurrentLine(Msg.Create(MsgKeys.MgCrit_Invalid_note_width, w));
+            ReportAtCurrentLine(Severity.Warning, Msg.Create(MsgKeys.Warn_Note_width_adjusted, w));
+            w = 1;
         }
 
         var extras = payload.Length > 3 ? payload[3..] : string.Empty;
@@ -452,7 +453,8 @@ public partial class UgcParser
         }
         if (w < 0 || (w == 0 && !clippedControl))
         {
-            ThrowAtCurrentLine(Msg.Create(MsgKeys.MgCrit_Invalid_note_width, w));
+            ReportAtCurrentLine(Severity.Warning, Msg.Create(MsgKeys.Warn_Note_width_adjusted, w));
+            w = 1;
         }
 
         var absTick = _lastParentNote.Tick.Original + offsetTick;

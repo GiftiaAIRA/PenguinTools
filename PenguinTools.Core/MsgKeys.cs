@@ -64,6 +64,7 @@ public static class MsgKeys
     public const string Warn_Zero_note_speed_not_reproduced = "diag.warn.zero_note_speed_not_reproduced";
     public const string Warn_Editor_undefined_timeline_speed = "diag.warn.editor_undefined_timeline_speed";
     public const string Warn_Number_adjusted = "diag.warn.number_adjusted";
+    public const string Warn_Note_width_adjusted = "diag.warn.note_width_adjusted";
     public const string Error_Command_failed = "diag.error.command_failed";
     public const string Error_Effect_file_not_found = "diag.error.effect_file_not_found";
     public const string Error_File_ignored_due_to_id_missing = "diag.error.file_ignored_due_to_id_missing";
@@ -114,7 +115,6 @@ public static class MsgKeys
     public const string MgCrit_Ugc_air_attachment_order = "diag.mgcrit.ugc_air_attachment_order";
     public const string MgCrit_Ugc_metadata_too_long = "diag.mgcrit.ugc_metadata_too_long";
     public const string MgCrit_Mgxc_string_too_long = "diag.mgcrit.mgxc_string_too_long";
-    public const string MgCrit_Unrepresentable_height = "diag.mgcrit.unrepresentable_height";
     public const string MgCrit_Unsupported_legacy_crash = "diag.mgcrit.unsupported_legacy_crash";
     public const string MgCrit_Legacy_crash_attributes = "diag.mgcrit.legacy_crash_attributes";
     public const string MgCrit_Editor_target_feature = "diag.mgcrit.editor_target_feature";

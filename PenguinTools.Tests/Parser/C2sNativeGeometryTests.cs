@@ -4,6 +4,7 @@ using PenguinTools.Chart.Converter.ugc;
 using PenguinTools.Chart.Models;
 using PenguinTools.Chart.Parser.c2s;
 using PenguinTools.Core;
+using PenguinTools.Core.Diagnostic;
 using Xunit;
 using C = PenguinTools.Chart.Models.c2s;
 using U = PenguinTools.Chart.Models.umgr;
@@ -41,7 +42,7 @@ public sealed class C2sNativeGeometryTests
     [InlineData("ASC 0 0 0 0 ASC 1 96 4 4 2 DEF")]
     [InlineData("TAP 0 0 0 4\nAHD 0 0 0 0 TAP 96 DEF")]
     [InlineData("ALD 0 0 0 4 24 1 96 4 0 2 DEF")]
-    public async Task ZeroWidthPlayableNotes_AreRejectedInsteadOfBeingWidened(string body)
+    public async Task ZeroWidthPlayableNotes_AreWidenedWithAWarning(string body)
     {
         var path = TestTempPaths.Create(".c2s");
         var ct = TestContext.Current.CancellationToken;
@@ -49,8 +50,12 @@ public sealed class C2sNativeGeometryTests
         {
             await File.WriteAllTextAsync(path, "VERSION 1.15.00 1.15.00\nRESOLUTION 384\nBPM_DEF 120 120 120 120\nMET_DEF 4 4\n" + body, ct);
             var parsed = await new C2SParser(new(path)).ParseAsync(ct);
-            Assert.False(parsed.Succeeded);
-            Assert.Contains(parsed.Diagnostics.Diagnostics, d => d.Message.Key == MsgKeys.MgCrit_Invalid_note_width);
+            Assert.True(parsed.Succeeded, parsed.ToString());
+            Assert.Contains(parsed.Diagnostics.Diagnostics, d => d.Message.Key == MsgKeys.Warn_Note_width_adjusted);
+            Assert.DoesNotContain(parsed.Diagnostics.Diagnostics, d => d.Severity == Severity.Error);
+            Assert.All(parsed.Value!.Notes, n => Assert.True(n.Width >= 1, $"{n.GetType().Name} width {n.Width}"));
+            var editor = new UgcChartConverter(new(parsed.Value)).Convert();
+            Assert.True(editor.Succeeded, editor.ToString());
         }
         finally { File.Delete(path); }
     }

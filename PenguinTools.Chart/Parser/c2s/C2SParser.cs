@@ -101,14 +101,7 @@ public sealed class C2SParser
         C2s.Extras.CaptureClock(C2s);
         C2s.Extras.SourceMetaKey = ChartExtras.MetaKey(C2s);
         ResolvePairings();
-        try
-        {
-            NoteWidthRules.Validate(C2s);
-        }
-        catch (DiagnosticException ex)
-        {
-            Diagnostic.Report(ex);
-        }
+        _sourceGameplayChanged |= NoteWidthRules.Widen(C2s, Diagnostic);
         var diagnostics = DiagnosticSnapshot.Create(Diagnostic);
         if (!diagnostics.HasError)
         {
@@ -762,7 +755,7 @@ public sealed class C2SParser
             Width = noteBase.Width,
             EndTick = AddLength(noteBase.Tick, length),
             EndLane = endLane,
-            EndWidth = Math.Min(endWidth, 16),
+            EndWidth = EndWidth(endWidth, lineNumber),
             Joint = type.EndsWith('C') ? Joint.C : Joint.D
         };
 
@@ -833,7 +826,7 @@ public sealed class C2SParser
             Height = ParseDisplayedHeight(height),
             EndTick = AddLength(noteBase.Tick, length),
             EndLane = endLane,
-            EndWidth = Math.Min(endWidth, 16),
+            EndWidth = EndWidth(endWidth, lineNumber),
             EndHeight = ParseDisplayedHeight(endHeight)
         };
 
@@ -897,7 +890,7 @@ public sealed class C2SParser
             Height = ParseDisplayedHeight(height),
             EndTick = AddLength(noteBase.Tick, length),
             EndLane = endLane,
-            EndWidth = Math.Min(endWidth, 16),
+            EndWidth = EndWidth(endWidth, lineNumber),
             EndHeight = ParseDisplayedHeight(endHeight)
         };
 
@@ -944,6 +937,17 @@ public sealed class C2SParser
         return true;
     }
 
+    private int EndWidth(int endWidth, int lineNumber)
+    {
+        if (endWidth >= 0)
+        {
+            return Math.Min(endWidth, 16);
+        }
+        _sourceGameplayChanged = true;
+        ReportAtLine(Severity.Warning, Msg.Create(MsgKeys.Warn_Note_width_adjusted, endWidth), lineNumber);
+        return 1;
+    }
+
     private bool TryParseNoteBase(string[] tokens, int lineNumber, out NoteBase noteBase, bool allowZeroWidth = false)
     {
         noteBase = default;
@@ -956,8 +960,10 @@ public sealed class C2SParser
 
         if (width <= 0 && !(allowZeroWidth && width == 0))
         {
-            ReportAtLine(Severity.Error, Msg.Create(MsgKeys.MgCrit_Invalid_note_width, width), lineNumber);
-            return false;
+            // Earlier releases widened these notes to one lane; keep converting the chart.
+            _sourceGameplayChanged = true;
+            ReportAtLine(Severity.Warning, Msg.Create(MsgKeys.Warn_Note_width_adjusted, width), lineNumber);
+            width = 1;
         }
         // Zero is provisional until resolved paths prove it continues a native
         // nonjudging clipped control rather than starting a playable note.

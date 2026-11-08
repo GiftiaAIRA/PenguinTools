@@ -124,12 +124,13 @@ internal static class EditorProjection
         note.Lane = Math.Clamp(note.Lane, expanded ? -16 : 0, (expanded ? 32 : 16) - note.Width);
         if (GetHeight(note) is { } height)
         {
+            var native = decimal.Round(height, 0, MidpointRounding.AwayFromZero);
             // UGC writes sampled points, not the Bezier handles themselves.
             if (!ugc || !CurveExpansion.IsControl(note))
             {
-                ValidateHeight(note, height, ugc, target);
+                native = ClampHeight(native, ugc, target);
             }
-            SetHeight(note, decimal.Round(height, 0, MidpointRounding.AwayFromZero));
+            SetHeight(note, native);
         }
         if (GetColor(note) is not (null or Color.DEF or Color.PNK))
         {
@@ -144,29 +145,24 @@ internal static class EditorProjection
         }
     }
 
-    internal static void ValidateUgcHeights(U.Chart chart)
+    /// <summary>Clamps sampled UGC curve points, which have no saved originals of their own.</summary>
+    internal static void ClampUgcHeights(U.Chart chart)
     {
         foreach (var note in AllNotes(chart))
         {
             if (GetHeight(note) is { } height)
             {
-                ValidateHeight(note, height, ugc: true);
+                SetHeight(note, ClampHeight(height, ugc: true));
             }
         }
     }
 
-    private static void ValidateHeight(U.Note note, decimal height, bool ugc, EditorTarget target = EditorTarget.Extended)
+    // Heights the output cannot store are clamped silently, as in upstream releases.
+    // The original value stays in the note projections and returns on the next import.
+    private static decimal ClampHeight(decimal height, bool ugc, EditorTarget target = EditorTarget.Extended)
     {
         var signed = !ugc && target == EditorTarget.Extended;
-        var maximum = ugc ? 1295 : signed ? int.MaxValue : ushort.MaxValue;
-        if (height < (signed ? int.MinValue : 0) || height > maximum)
-        {
-            throw new TimedDiagnosticException(
-                Msg.Create(MsgKeys.MgCrit_Unrepresentable_height,
-                    (ugc ? "UGC v" : "MGXC v") + EditorTargetRules.Version(target, ugc), height, maximum,
-                    signed ? int.MinValue : 0),
-                note.Tick.Original, note);
-        }
+        return Math.Clamp(height, signed ? int.MinValue : 0, ugc ? 1295 : signed ? int.MaxValue : ushort.MaxValue);
     }
 
     private static void CaptureNoteProjections(U.Chart chart, Dictionary<U.Note, EditorNoteProjection> before,

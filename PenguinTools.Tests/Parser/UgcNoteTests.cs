@@ -745,4 +745,27 @@ public class UgcNoteTests
             Assert.Empty(airs);
         }
     }
+
+    [Theory]
+    [InlineData("#0'0:t00\n")]
+    [InlineData("#0'0:s04\n#480>s00\n")]
+    public async Task ZeroWidthNotes_AreWidenedWithAWarning(string body)
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var tmp = TestTempPaths.Create(".ugc");
+        try
+        {
+            await File.WriteAllTextAsync(tmp, Header + body, ct);
+            var r = await new UgcParser(new UgcParseRequest(tmp, TestAssets.Load()), TestMediaTool.Instance).ParseAsync(ct);
+            Assert.True(r.Succeeded, r.ToString());
+            Assert.Contains(r.Diagnostics.Diagnostics, d => d.Message.Key == MsgKeys.Warn_Note_width_adjusted);
+            Assert.All(r.Value!.Notes.Children.SelectMany(n => new[] { n }.Concat(n.Children)), n => Assert.Equal(n is Slide ? 4 : 1, n.Width));
+            var converted = new C2SChartConverter(new C2SConvertRequest(r.Value)).Convert();
+            Assert.True(converted.Succeeded, converted.ToString());
+        }
+        finally
+        {
+            File.Delete(tmp);
+        }
+    }
 }
