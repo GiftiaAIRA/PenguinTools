@@ -23,15 +23,6 @@ internal static class EditorProjection
     {
         var chart = ChartCopy.Create(source);
         NoteWidthRules.Validate(chart);
-        foreach (var point in chart.Notes.Children.OfType<U.Slide>()
-                     .SelectMany(slide => slide.Children.SkipLast(1)).OfType<U.SlideJoint>())
-        {
-            if (point.PairNote is not null)
-            {
-                throw new TimedDiagnosticException(Msg.Create(MsgKeys.MgCrit_Editor_interior_air,
-                    ugc ? "UGC" : "MGXC"), point.Tick.Original, point);
-            }
-        }
         foreach (var crash in chart.Notes.Children.OfType<U.AirCrash>())
         {
             LegacyCrashMetadata.Validate(crash);

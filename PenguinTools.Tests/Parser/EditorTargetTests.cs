@@ -19,50 +19,6 @@ namespace PenguinTools.Tests.Parser;
 public sealed class EditorTargetTests
 {
     [Theory]
-    [InlineData(EditorTarget.Legacy, ".mgxc")]
-    [InlineData(EditorTarget.Standard, ".mgxc")]
-    [InlineData(EditorTarget.Extended, ".mgxc")]
-    [InlineData(EditorTarget.Legacy, ".ugc")]
-    [InlineData(EditorTarget.Standard, ".ugc")]
-    [InlineData(EditorTarget.Extended, ".ugc")]
-    public async Task InteriorSlideAir_IsRejectedWithoutReplacingOutput(EditorTarget target, string extension)
-    {
-        var source = new PenguinTools.Chart.Models.c2s.Chart();
-        var paired = new PenguinTools.Chart.Models.c2s.Slide
-        { Tick = 0, Lane = 0, Width = 4, EndTick = 960, EndLane = 4, EndWidth = 4 };
-        source.Notes.AddRange([
-            paired,
-            new PenguinTools.Chart.Models.c2s.Slide
-                { Tick = 480, Lane = 8, Width = 4, EndTick = 960, EndLane = 4, EndWidth = 4 },
-            new PenguinTools.Chart.Models.c2s.Slide
-                { Tick = 960, Lane = 4, Width = 4, EndTick = 1440, EndLane = 12, EndWidth = 4 },
-            new PenguinTools.Chart.Models.c2s.Air
-                { Tick = 960, Lane = 4, Width = 4, Parent = paired, Direction = AirDirection.IR }
-        ]);
-        var converted = new UgcChartConverter(new(source)).Convert();
-        Assert.True(converted.Succeeded, converted.ToString());
-        var chart = converted.Value!;
-        var air = Assert.Single(chart.Notes.Children.OfType<U.Air>());
-        var parent = Assert.IsType<U.SlideJoint>(air.PairNote);
-        Assert.Equal(0, parent.Parent!.Tick.Original);
-        Assert.NotSame(parent.Parent.LastChild, parent);
-        var path = TestTempPaths.Create(extension);
-        try
-        {
-            await File.WriteAllTextAsync(path, "existing chart", Ct);
-            var result = extension == ".mgxc"
-                ? await new MgxcChartWriter(new(path, chart, target)).WriteAsync(Ct)
-                : await new UgcChartWriter(path, chart, target).WriteAsync(Ct);
-            Assert.False(result.Succeeded);
-            Assert.Contains(result.Diagnostics.Diagnostics, d => d.Message.Key == MsgKeys.MgCrit_Editor_interior_air);
-            Assert.Equal("existing chart", await File.ReadAllTextAsync(path, Ct));
-            Assert.Same(parent, air.PairNote);
-            Assert.Equal(1440, parent.Parent.LastChild!.Tick.Original);
-        }
-        finally { File.Delete(path); }
-    }
-
-    [Theory]
     [InlineData(65535, true)]
     [InlineData(65536, false)]
     public async Task ExtendedUgcCopyright_StillRespectsNativeTextCapacity(int bytes, bool supported)

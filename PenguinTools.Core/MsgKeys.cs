@@ -112,7 +112,6 @@ public static class MsgKeys
     public const string MgCrit_Unrecognized_data_type = "diag.mgcrit.unrecognized_data_type";
     public const string MgCrit_Unrecognized_event = "diag.mgcrit.unrecognized_event";
     public const string MgCrit_Ugc_air_attachment_order = "diag.mgcrit.ugc_air_attachment_order";
-    public const string MgCrit_Editor_interior_air = "diag.mgcrit.editor_interior_air";
     public const string MgCrit_Ugc_metadata_too_long = "diag.mgcrit.ugc_metadata_too_long";
     public const string MgCrit_Mgxc_string_too_long = "diag.mgcrit.mgxc_string_too_long";
     public const string MgCrit_Unrepresentable_height = "diag.mgcrit.unrepresentable_height";

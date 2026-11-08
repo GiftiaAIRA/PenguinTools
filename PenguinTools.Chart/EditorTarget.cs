@@ -77,23 +77,23 @@ internal static class EditorTargetRules
             if (!condition)
             {
                 throw new TimedDiagnosticException(Msg.Create(MsgKeys.MgCrit_Editor_target_feature,
-                    target.ToString().ToLowerInvariant(), feature), tick);
+                    target == EditorTarget.Legacy ? "Margrete 1.8" : "Margrete 1.9", feature), tick);
             }
         }
 
         foreach (var beat in chart.Events.Children.OfType<U.BeatEvent>())
         {
-            Require(beat.Numerator > 0, "0/x", beat.Tick.Original);
+            Require(beat.Numerator > 0, "0/x meters", beat.Tick.Original);
         }
         foreach (var slide in chart.Notes.Children.OfType<U.Slide>())
         {
             Require(!chart.Extras.SegmentSlideLines || !SlideSegmentMetadata.IsMixed(SlideSegmentMetadata.Bits(slide)),
-                "segmented NCL", slide.Tick.Original);
+                "per-segment NoLine", slide.Tick.Original);
         }
         if (!ugc)
         {
             Require(!chart.Extras.ClickEnabled || chart.Extras.Count(chart.Meta.BgmInitialNumerator) == chart.Meta.BgmInitialNumerator,
-                "custom metronome count (use UGC)");
+                "metronome counts (save as UGC)");
         }
         var hasCurves = chart.Notes.Children.SelectMany(n => n.Children).Any(CurveExpansion.IsControl);
         if (hasCurves)
@@ -115,47 +115,47 @@ internal static class EditorTargetRules
                     // Original UGC readers discard coincident path nodes even
                     // when their lane, width or AIR height differs.
                     Require(point.Tick.Original > previousTick,
-                        "non-increasing SLIDE/AIR-SLIDE node time (use MGXC)", point.Tick.Original);
+                        "path nodes at the same time (save as MGXC)", point.Tick.Original);
                     previousTick = point.Tick.Original;
                 }
             }
         }
         foreach (var note in chart.Notes.Children.SelectMany(n => new[] { n }.Concat(n.Children)))
         {
-            Require(note.Tick.Original >= 0, "negative note time", note.Tick.Original);
+            Require(note.Tick.Original >= 0, "notes before time 0", note.Tick.Original);
             var pathPoint = ugc && target != EditorTarget.Legacy && NoteWidthRules.IsClippedControl(note);
             Require(note.Lane >= -16 && note.Width >= (pathPoint ? 0 : 1) && note.Width <= 16 &&
                 note.Lane + (long)note.Width <= 32,
-                "unrepresentable geometry", note.Tick.Original);
+                "this lane or width", note.Tick.Original);
             Require(note is not U.Air { Color: not (Color.DEF or Color.PNK) }
                 and not U.AirHold { Color: not (Color.DEF or Color.PNK) }
                 and not U.AirSlide { Color: not (Color.DEF or Color.PNK) },
-                "custom AIR color", note.Tick.Original);
+                "AIR colors other than default and pink", note.Tick.Original);
             Require(!ugc || note is not U.AirHold { Direction: not AirDirection.IR }
                 and not U.AirSlide { Direction: not AirDirection.IR },
-                "directional long AIR head (use MGXC)", note.Tick.Original);
+                "AIR-HOLD/AIR-SLIDE arrows (save as MGXC)", note.Tick.Original);
             Require(!ugc || note is not U.AirHoldJoint { Joint: Joint.C, NextSibling: not null },
-                "intermediate AIR-HOLD control (use MGXC)", note.Tick.Original);
+                "AIR-HOLD middle control points (save as MGXC)", note.Tick.Original);
             Require(!ugc || note is not U.SlideJoint { Joint: Joint.C, NextSibling: null },
-                "nonjudging SLIDE tail (use MGXC)", note.Tick.Original);
+                "non-judging SLIDE ends (save as MGXC)", note.Tick.Original);
             if (target == EditorTarget.Legacy)
             {
                 Require(note.Lane >= 0 && note.Width > 0 && note.Lane + (long)note.Width <= 16,
-                    "out-of-field geometry", note.Tick.Original);
+                    "notes outside lanes 0–16", note.Tick.Original);
                 Require(note is not U.Slide { NoLine: true } and not U.SlideJoint { NoLine: true },
-                    "NCL", note.Tick.Original);
+                    "NoLine SLIDE", note.Tick.Original);
                 // Margrete 1.8 neither displays nor exports AIR-CRUSH rotation axes.
                 Require(note is not U.AirCrash { Attr: AirLadderAttr.AxisY or AirLadderAttr.AxisZ },
                     "AIR-CRUSH rotation", note.Tick.Original);
             }
 
             Require(!ugc || note is not U.AirCrash { HasExplicitJudgements: true },
-                "UGC explicit AIR-CRUSH judgements", note.Tick.Original);
+                "separately placed AIR-CRUSH judgement points", note.Tick.Original);
         }
         if (target == EditorTarget.Standard &&
             chart.Notes.Children.FirstOrDefault(MargreteInput.IsFullyOutsidePlayableLanes) is { } outside)
         {
-            Require(false, "note entirely outside the playable lanes", outside.Tick.Original);
+            Require(false, "notes fully outside lanes 0–16", outside.Tick.Original);
         }
         if (ugc && target == EditorTarget.Standard && chart.Notes.Children
                 .SelectMany(n => n.Children).Any(n => n.Width == 0 && NoteWidthRules.IsClippedControl(n)))

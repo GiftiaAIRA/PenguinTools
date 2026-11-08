@@ -35,7 +35,7 @@ internal static class EditorCoordinates
                 chart.Extras.EditorHeaders.Any(l => l.StartsWith("@SPDFLD", StringComparison.OrdinalIgnoreCase)))
             {
                 throw new DiagnosticException(Msg.Create(MsgKeys.MgCrit_Editor_target_feature,
-                    "fixed origin", "legacy-origin locked curves, image events or relative speed fields"));
+                    "Zero-origin conversion", "locked curves, image events or SPDFLD from an old-origin chart"));
             }
             var notes = chart.Notes.Children.SelectMany(n => new[] { n }.Concat(n.Children))
                 .Distinct().Select(n => (Note: n, Tick: n.Tick.Original)).ToArray();
