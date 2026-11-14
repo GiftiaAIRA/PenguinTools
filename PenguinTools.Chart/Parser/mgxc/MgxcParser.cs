@@ -123,13 +123,19 @@ public partial class MgxcParser
     private void ReadMetadata(BinaryReader br)
     {
         br.ReadBlock(HeaderMeta, ParseMeta);
+        void WarnInvalidMetadata() => ReportAtPosition(Severity.Warning,
+            Msg.Key(MsgKeys.Warn_Roundtrip_metadata_ignored), br.BaseStream.Position);
         if (_copyright.Contains("PT_C2S_", StringComparison.Ordinal))
         {
             var clickEnabled = Mgxc.Extras.ClickEnabled;
             var tutorial = Mgxc.Extras.Tutorial;
-            Mgxc.Extras = ChartExtras.FromCopyright(_copyright);
+            Mgxc.Extras = ChartExtras.FromCopyright(_copyright, WarnInvalidMetadata);
             Mgxc.Extras.ClickEnabled = clickEnabled;
             Mgxc.Extras.Tutorial = tutorial;
+        }
+        else
+        {
+            Mgxc.Extras.ReadCopyright(_copyright, WarnInvalidMetadata);
         }
     }
 
@@ -232,6 +238,15 @@ public partial class MgxcParser
             Mgxc.Meta.SortName = ChartPostProcessor.GetSortName(Mgxc.Meta.Title);
             Diagnostic.Report(new Diagnostic(Severity.Information, Msg.Create(MsgKeys.Mg_No_sortname_provided,
                 ("title", Mgxc.Meta.Title), ("sortName", Mgxc.Meta.SortName))));
+        }
+
+        if (!string.IsNullOrWhiteSpace(Mgxc.Meta.WallFilePath))
+        {
+            QueueValidation(
+                MediaValidator.CheckImageValidAsync(Mgxc.Meta.FullWallFilePath),
+                Mgxc.Meta.FullWallFilePath,
+                MsgKeys.Error_Invalid_wall_image,
+                () => Mgxc.Meta.WallImageValid = false);
         }
 
         if (Mgxc.Meta.IsCustomStage && !string.IsNullOrWhiteSpace(Mgxc.Meta.FullBgiFilePath))

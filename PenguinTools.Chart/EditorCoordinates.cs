@@ -5,12 +5,16 @@ namespace PenguinTools.Chart;
 
 internal static class EditorCoordinates
 {
+    // Round-trip bookmarks prefix their timing markers; the markers follow the prefix.
+    private static string? Payload(string? tag) =>
+        tag?.StartsWith(ChartExtras.BookmarkPrefix, StringComparison.Ordinal) == true ? tag[ChartExtras.BookmarkPrefix.Length..] : tag;
+
     internal static void UseFixedOrigin(U.Chart chart)
     {
         chart.Extras.FixedZeroOrigin |= ChartExtras.HasFixedZeroOrigin(chart.Meta.Copyright) ||
-            chart.Events.Children.OfType<U.BookmarkEvent>().Any(b => ChartExtras.HasFixedZeroOrigin(b.Tag));
+            chart.Events.Children.OfType<U.BookmarkEvent>().Any(b => ChartExtras.HasFixedZeroOrigin(Payload(b.Tag)));
         chart.Extras.PrerollBar1Applied |= ChartExtras.HasPrerollBar1(chart.Meta.Copyright) ||
-            chart.Events.Children.OfType<U.BookmarkEvent>().Any(b => ChartExtras.HasPrerollBar1(b.Tag));
+            chart.Events.Children.OfType<U.BookmarkEvent>().Any(b => ChartExtras.HasPrerollBar1(Payload(b.Tag)));
         if (chart.Extras.UsesFixedCoordinateOrigin)
         {
             chart.Extras.ApplyCoordinateOrigin(chart.Meta);

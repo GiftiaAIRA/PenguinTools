@@ -9,7 +9,7 @@ The CLI is a command adapter around application services. Chart and media projec
 | `PenguinTools.Core`           | Shared metadata, diagnostics, messages, IO helpers, and interfaces |
 | `PenguinTools.Chart`          | Parse, model, validate, post-process, and write charts             |
 | `PenguinTools.Media`          | Audio and image operations, CRI codecs, DDS, and AFB handling        |
-| `PenguinTools.Workflow`       | Scan charts and coordinate music/option exports and caches         |
+| `PenguinTools.Workflow`       | Scan charts and coordinate option/media exports and caches         |
 | `PenguinTools.Infrastructure` | Asset storage, paths, and media integration                        |
 | `PenguinTools.Assets`         | Asset build/copy configuration                                     |
 | `PenguinTools.Tests`          | Unit tests and optional sample/native integration tests            |
@@ -25,6 +25,24 @@ Media operations are split between `IAudioService` and `IImageService`. `AudioSe
 [Chart conversion](chart-conversion.md) defines supported conversions, timing, approximation, and round-trip behavior. [Format references](formats/README.md) describe file syntax and provenance; [testing](testing.md) covers regression and fixture requirements.
 
 Directory scans share audio and image validation tasks for files with the same full path, length, and last-write time. This reuse is scoped to one scan; each chart retains its own diagnostics, and scan cancellation reaches the shared decoder. Option export caching separately verifies input and output content hashes.
+
+## Incremental builds
+
+`IPenguinToolsApplication.CreateBuildSession()` creates a disposable, single-document `IncrementalBuildSession`. The application must outlive its sessions. `PrepareAsync` parses one chart and uses that model for the summary, metadata, and option export. UGC content is parsed in memory with a virtual chart path below `BaseDirectory`, so relative media references retain their source directory. Saved UGC, MGXC, and SUS inputs use `InputPath`.
+
+Each successful build owns a complete private cache tree. `OptionConversionCache.ForSnapshot` clones cache state and copies verified outputs into an empty candidate tree when input hashes and conversion recipes match. The existing recipes cover audio offsets, preview bounds, encryption keys, and image settings. BPM and meter changes that alter the leading audio offset therefore invalidate audio. Successful media validation is cached by path, media type, and SHA-256 content within the application's fixed service configuration. Missing or changed files are checked again.
+
+C2S reuse requires identical input bytes and source identity within the session. Chart conversion diagnostics accompany that cached output. An identical in-memory UGC request can reuse the entire completed build when configuration bytes, overrides, calendar date, and all successfully validated media hashes match. Failed media validation disables this shortcut, so missing resources that appear later are discovered. Other requests collect parsing diagnostics again. Changes inside chart text conservatively run C2S conversion, including edits to media paths. Generated metadata and C2S have independent artifact hashes, so clients can retain a loaded chart when its resulting bytes are unchanged.
+
+Publication copies the completed tree into the requested empty destination using exclusive file creation. A caller consumes that tree after the successful result; the result follows completion and closure of all writes. The session commits its cache after publication succeeds. Failure preserves the preceding cache and published snapshots; a failed destination is not a usable snapshot. Only artifacts requested by the current build enter the candidate tree; removed optional resources are absent. Disposal removes session-owned work files and leaves caller-owned snapshots intact. The [session protocol](cli.md#incremental-build-session) exposes the same service over JSONL.
+
+### Persistent media reuse
+
+`PersistentMediaCache` stores `OptionConversionCache` and audio, jacket, stage, and wall artifacts below a caller-owned cache directory. The checkpoint records a schema version, caller-supplied converter identity, conversion recipes, input and output content hashes, and relative artifact paths. Source-generated JSON serialization supports managed and NativeAOT builds. Chart models, C2S caches, diagnostics, and media validation results remain session-local.
+
+Each cold request parses the current chart and reads current configuration. The exporter recomputes media recipes from that model, including timing and encryption settings, and checks source and cached output SHA-256 hashes before copying a hit into its private candidate. The checkpoint cannot bypass current chart validation or retain a removed optional resource. A missing or invalid checkpoint is a cache miss. Artifact paths must remain inside their generation, and reparse points are rejected.
+
+Storage copies media into a distinct generation and replaces the checkpoint after every write closes. A failed build cannot update the checkpoint. Optional cache I/O failure preserves the usable published result. Cleanup removes recognized generations only; caller sidecars remain intact. The [caller lease and identity contract](cli.md#incremental-build-session) separates cache lifecycle from snapshot ownership.
 
 ## Messages
 

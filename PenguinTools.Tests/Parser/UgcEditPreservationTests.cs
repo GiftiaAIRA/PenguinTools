@@ -12,6 +12,44 @@ namespace PenguinTools.Tests.Parser;
 public sealed class UgcEditPreservationTests
 {
     [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Base36Spelling_RetainsCheckedAttributes(bool height)
+    {
+        var chart = Chart();
+        var crash = Crash(0);
+        crash.Width = 10;
+        crash.Height = 370;
+        chart.Notes.AppendChild(crash);
+        var parsed = await Edit(chart, text =>
+        {
+            Assert.Contains(":CGAAA", text);
+            return height
+                ? text.Replace(":CGAAA", ":CGAaa", StringComparison.Ordinal)
+                    .Replace(">cK4ZZ", ">cK4zz", StringComparison.Ordinal)
+                : text.Replace(":CGAAA", ":CGaAA", StringComparison.Ordinal);
+        });
+        Assert.True(parsed.Extras.BinarySnapshotValid);
+        var retained = Assert.Single(parsed.Notes.Children.OfType<U.AirCrash>());
+        Assert.Equal(AirLadderAttr.Trace, retained.Attr);
+        Assert.Equal(1600, Assert.IsType<U.AirCrashJoint>(retained.LastChild).Height);
+    }
+
+    [Fact]
+    public async Task Base62LaneCaseChange_InvalidatesCheckedAttributes()
+    {
+        var chart = Chart();
+        var crash = Crash(0);
+        crash.Lane = -6;
+        chart.Notes.AppendChild(crash);
+        var parsed = await Edit(chart, text => ReplaceFirst(text, ":CA4", ":Ca4"));
+        Assert.False(parsed.Extras.BinarySnapshotValid);
+        var edited = Assert.Single(parsed.Notes.Children.OfType<U.AirCrash>());
+        Assert.Equal(20, edited.Lane);
+        Assert.Equal(AirLadderAttr.DEF, edited.Attr);
+    }
+
+    [Theory]
     [InlineData("@TITLE\tOriginal", "@TITLE\tEdited")]
     [InlineData("@ARTIST\tOriginal", "@ARTIST\tEdited")]
     [InlineData("@DESIGN\tOriginal", "@DESIGN\tEdited")]
@@ -26,7 +64,7 @@ public sealed class UgcEditPreservationTests
         Assert.Contains("Edited", new[] { parsed.Meta.Title, parsed.Meta.Artist, parsed.Meta.Designer, parsed.Meta.Comment });
         Assert.True(parsed.Extras.BinarySnapshotValid);
         var crash = Assert.Single(parsed.Notes.Children.OfType<U.AirCrash>());
-        Assert.Equal(1200.25m, Assert.IsType<U.AirCrashJoint>(crash.LastChild).Height);
+        Assert.Equal(1600, Assert.IsType<U.AirCrashJoint>(crash.LastChild).Height);
         Assert.Equal(AirLadderAttr.Trace, crash.Attr);
         var c2s = new C2SChartConverter(new C2SConvertRequest(parsed)).Convert();
         Assert.True(c2s.Succeeded);
@@ -41,14 +79,14 @@ public sealed class UgcEditPreservationTests
         chart.Notes.AppendChild(Crash(0));
         chart.Notes.AppendChild(Crash(1920));
         AddExHold(chart, 3840);
-        var parsed = await Edit(chart, text => ReplaceFirst(text, "#480>cK4XC", "#600>cK4XC"));
+        var parsed = await Edit(chart, text => ReplaceFirst(text, "#480>cK4ZZ", "#600>cK4ZZ"));
         Assert.False(parsed.Extras.BinarySnapshotValid);
         var crashes = parsed.Notes.Children.OfType<U.AirCrash>().OrderBy(n => n.Tick.Original).ToArray();
         Assert.Equal(AirLadderAttr.DEF, crashes[0].Attr);
         Assert.Equal(600, crashes[0].LastChild!.Tick.Original);
-        Assert.Equal(1200, ((U.AirCrashJoint)crashes[0].LastChild!).Height);
+        Assert.Equal(1295, ((U.AirCrashJoint)crashes[0].LastChild!).Height);
         Assert.Equal(AirLadderAttr.Trace, crashes[1].Attr);
-        Assert.Equal(1200.25m, ((U.AirCrashJoint)crashes[1].LastChild!).Height);
+        Assert.Equal(1600, ((U.AirCrashJoint)crashes[1].LastChild!).Height);
         var converted = new C2SChartConverter(new C2SConvertRequest(parsed)).Convert();
         Assert.True(converted.Succeeded);
         Assert.Single(converted.Value!.Notes.OfType<C.ExTap>());
@@ -58,9 +96,9 @@ public sealed class UgcEditPreservationTests
         var rewrittenCrashes = rewritten.Notes.Children.OfType<U.AirCrash>().OrderBy(n => n.Tick.Original).ToArray();
         Assert.Equal(600, rewrittenCrashes[0].LastChild!.Tick.Original);
         Assert.Equal(AirLadderAttr.DEF, rewrittenCrashes[0].Attr);
-        Assert.Equal(1200, ((U.AirCrashJoint)rewrittenCrashes[0].LastChild!).Height);
+        Assert.Equal(1295, ((U.AirCrashJoint)rewrittenCrashes[0].LastChild!).Height);
         Assert.Equal(AirLadderAttr.Trace, rewrittenCrashes[1].Attr);
-        Assert.Equal(1200.25m, ((U.AirCrashJoint)rewrittenCrashes[1].LastChild!).Height);
+        Assert.Equal(1600, ((U.AirCrashJoint)rewrittenCrashes[1].LastChild!).Height);
     }
 
     [Fact]
@@ -101,16 +139,16 @@ public sealed class UgcEditPreservationTests
         var slide = new U.Slide { Tick = 0, Lane = 0, Width = 2 };
         var tail = new U.SlideJoint { Tick = 480, Lane = 4, Width = 2 };
         slide.AppendChild(tail);
-        var air = new U.AirSlide { Height = 1200.25m };
+        var air = new U.AirSlide { Height = 1600 };
         tail.MakePair(air);
-        air.AppendChild(new U.AirSlideJoint { Tick = 960, Lane = 6, Width = 2, Height = 1200.25m });
+        air.AppendChild(new U.AirSlideJoint { Tick = 960, Lane = 6, Width = 2, Height = 1600 });
         chart.Notes.AppendChild(slide);
         chart.Notes.AppendChild(air);
         chart.Notes.AppendChild(Crash(1920));
         var parsed = await Edit(chart, text => text.Replace("#0'0:sG20", "#0'0:sH20", StringComparison.Ordinal));
         var returned = Assert.Single(parsed.Notes.Children.OfType<U.AirSlide>());
-        Assert.Equal(1200, returned.Height);
-        Assert.Equal(1200, Assert.IsType<U.AirSlideJoint>(returned.LastChild).Height);
+        Assert.Equal(1295, returned.Height);
+        Assert.Equal(1295, Assert.IsType<U.AirSlideJoint>(returned.LastChild).Height);
         Assert.Same(Assert.Single(parsed.Notes.Children.OfType<U.Slide>()).LastChild, returned.PairNote);
         Assert.Equal(AirLadderAttr.Trace, Assert.Single(parsed.Notes.Children.OfType<U.AirCrash>()).Attr);
     }
@@ -262,7 +300,7 @@ public sealed class UgcEditPreservationTests
     private static U.AirCrash Crash(int tick)
     {
         var crash = new U.AirCrash { Tick = tick, Lane = 0, Width = 4, Height = 80, Attr = AirLadderAttr.Trace };
-        crash.AppendChild(new U.AirCrashJoint { Tick = tick + 480, Lane = 4, Width = 4, Height = 1200.25m });
+        crash.AppendChild(new U.AirCrashJoint { Tick = tick + 480, Lane = 4, Width = 4, Height = 1600 });
         return crash;
     }
 

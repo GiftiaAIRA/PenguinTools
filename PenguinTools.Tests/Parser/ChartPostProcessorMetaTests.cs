@@ -66,6 +66,48 @@ public sealed class ChartPostProcessorMetaTests
         Assert.DoesNotContain(diagnostics.Diagnostics, d => d.Message.Key == MsgKeys.Mg_Meta_Ignored);
     }
 
+    [Fact]
+    public void InvalidOptionalCommands_WarnAndKeepProcessingTheChart()
+    {
+        var chart = CreateChart("#meta\n#meta genre bad NewGenre\n#meta bg_offset bad\n#meta main false");
+        chart.Meta.FilePath = "chart.mgxc";
+        chart.Meta.Genre = new(7, "Original");
+        chart.Meta.IsMain = true;
+        var tap = new Tap { Tick = 480, Lane = 2, Width = 4 };
+        chart.Notes.AppendChild(tap);
+        var diagnostics = new DiagnosticCollector();
+
+        new ChartPostProcessor(chart, diagnostics, TestAssets.Load()).Run();
+
+        Assert.False(diagnostics.HasError);
+        Assert.Equal(3, diagnostics.Diagnostics.Count(d => d.Message.Key == MsgKeys.Warn_Invalid_metadata &&
+            d.Severity == Severity.Warning && d.Path == chart.Meta.FilePath));
+        Assert.Equal("Original", chart.Meta.Genre.Str);
+        Assert.Equal(160, chart.Meta.BackgroundOffset);
+        Assert.False(chart.Meta.IsMain);
+        Assert.Same(tap, Assert.Single(chart.Notes.Children));
+    }
+
+    [Fact]
+    public void SignedAssetIdsInComments_CanBeDefinedAndReferenced()
+    {
+        var tags = new[] { "genre", "stage", "fline", "wetag" };
+        var chart = CreateChart(string.Join("\n", tags.SelectMany(tag => new[]
+        {
+            $"#meta {tag} -2 Custom",
+            $"#meta {tag} 0 Valid",
+            $"#meta {tag} -2"
+        })));
+        var diagnostics = new DiagnosticCollector();
+
+        new ChartPostProcessor(chart, diagnostics, TestAssets.Load()).Run();
+
+        Assert.False(diagnostics.HasError);
+        Assert.DoesNotContain(diagnostics.Diagnostics, d => d.Message.Key == MsgKeys.Warn_Invalid_metadata);
+        Assert.All(new[] { chart.Meta.Genre!, chart.Meta.Stage, chart.Meta.NotesFieldLine, chart.Meta.WeTag },
+            entry => { Assert.Equal(-2, entry.Id); Assert.Equal("Custom", entry.Str); });
+    }
+
     private static UmgrChart CreateChart(string comment)
     {
         var chart = new UmgrChart();

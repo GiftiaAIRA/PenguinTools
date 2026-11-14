@@ -7,6 +7,7 @@ namespace PenguinTools.Chart.Parser.ugc;
 
 public partial class UgcParser
 {
+    private readonly List<string> _commentLines = [];
     private void DispatchHeaderLine(string line)
     {
         var tokens = line.Split('\t');
@@ -100,7 +101,7 @@ public partial class UgcParser
                 HandleClickCount(args);
                 break;
             case "CMT":
-                Ugc.Meta.Comment = Str(args);
+                HandleComment(args);
                 break;
 
             case "ATINFO":
@@ -150,6 +151,12 @@ public partial class UgcParser
                 PreserveUnknownHeader(name, args, line);
                 break;
         }
+    }
+
+    private void HandleComment(string[] args)
+    {
+        _commentLines.Add(Str(args));
+        Ugc.Meta.Comment = string.Join('\n', _commentLines);
     }
 
     private void HandleBackgroundMode(string[] args)
@@ -206,22 +213,26 @@ public partial class UgcParser
     {
         if (!int.TryParse(Str(args), out var count) || count < 0)
         {
-            ThrowAtCurrentLine(Msg.Create(MsgKeys.Error_Invalid_Header, Str(args), "nonnegative CLKCNT"));
+            ReportAtCurrentLine(Severity.Warning, Msg.Create(MsgKeys.Warn_Invalid_metadata, "UGC CLKCNT", Str(args)));
+            return;
         }
 
         Ugc.Extras.ClickCount = count;
     }
+
+    private void WarnInvalidRoundtripMetadata() =>
+        ReportAtCurrentLine(Severity.Warning, Msg.Key(MsgKeys.Warn_Roundtrip_metadata_ignored));
 
     private void HandleCopyright(string[] args)
     {
         Ugc.Meta.Copyright = ChartExtras.CopyrightText(Str(args));
         if (Str(args).Contains("PT_C2S_", StringComparison.Ordinal))
         {
-            Ugc.Extras = ChartExtras.FromCopyright(Str(args));
+            Ugc.Extras = ChartExtras.FromCopyright(Str(args), WarnInvalidRoundtripMetadata);
         }
         else
         {
-            Ugc.Extras.ReadCopyright(Str(args));
+            Ugc.Extras.ReadCopyright(Str(args), WarnInvalidRoundtripMetadata);
         }
 
         C2sRoundTripComment.Absorb(Ugc.Meta, Ugc.Extras.RoundTripBookmarks);
@@ -374,10 +385,7 @@ public partial class UgcParser
         }
 
         Ugc.Meta.MgxcId = args[0];
-        if (int.TryParse(args[0], out var id))
-        {
-            Ugc.Meta.Id = id;
-        }
+        Ugc.Meta.Id = ResourceIds.TryParseNonNegative(args[0], out var id) ? id : null;
     }
 
     private void HandleReleaseDate(string[] args)

@@ -1,9 +1,12 @@
 using System;
+using System.Buffers.Text;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
+using PenguinTools.Core.Diagnostic;
 
 namespace PenguinTools.Chart;
 
@@ -310,6 +313,21 @@ public static partial class C2SRoundTrip
         }
         return C2sSlidePaths.PreservesPaths(notes, ordered, resolution) ? ordered : notes;
     }
+    internal static string WriteOptionalMetadata(Func<string> encode, IDiagnosticSink diagnostics, string path)
+    {
+        try
+        {
+            return encode();
+        }
+        catch (FormatException ex)
+        {
+            diagnostics.Report(new PathDiagnostic(Severity.Warning,
+                Msg.Key(MsgKeys.Warn_Roundtrip_metadata_not_saved), path)
+            { Target = ex });
+            return "";
+        }
+    }
+
     // Byte-oriented LZ encoding keeps lossless snapshots within MGXC string limits.
     public static string Pack(string text, bool forceCompression = false)
     {
@@ -320,7 +338,7 @@ public static partial class C2SRoundTrip
         }
         if (!forceCompression && data.Length < 12000)
         {
-            return "MGR_C2S_V1=" + Convert.ToBase64String(data) + ";";
+            return "MGR_C2S_V1=" + Base64.EncodeToString(data) + ";";
         }
 
         var packed = new List<byte>();
@@ -345,7 +363,7 @@ public static partial class C2SRoundTrip
             RememberPositions(data, i, advance, last);
             i += advance;
         }
-        return "MGR_C2S_LZ1=" + Convert.ToBase64String(packed.ToArray()) + ";";
+        return "MGR_C2S_LZ1=" + Base64.EncodeToString(CollectionsMarshal.AsSpan(packed)) + ";";
     }
 
     private static (int Length, int Prior) FindMatch(byte[] data, int index, Dictionary<int, List<int>> last)

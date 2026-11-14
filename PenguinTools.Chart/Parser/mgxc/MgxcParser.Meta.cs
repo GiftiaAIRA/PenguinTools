@@ -197,7 +197,6 @@ public partial class MgxcParser
     {
         _copyright = copyright;
         Mgxc.Meta.Copyright = ChartExtras.CopyrightText(copyright);
-        Mgxc.Extras.ReadCopyright(copyright);
     }
 
     private void ApplyGenre(string genre)
@@ -258,10 +257,7 @@ public partial class MgxcParser
     private void ApplySongId(string songId)
     {
         Mgxc.Meta.MgxcId = songId;
-        if (int.TryParse(Mgxc.Meta.MgxcId, out var id))
-        {
-            Mgxc.Meta.Id = id;
-        }
+        Mgxc.Meta.Id = ResourceIds.TryParseNonNegative(Mgxc.Meta.MgxcId, out var id) ? id : null;
     }
 
     private void ApplyBgmFile(string path)

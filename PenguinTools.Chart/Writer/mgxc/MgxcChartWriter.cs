@@ -21,6 +21,7 @@ public sealed class MgxcChartWriter(MgxcWriteRequest request)
     private const string DefaultBookmarkColor = "FFFFFF";
 
     private UmgrModel.Chart _chart = null!;
+    private DiagnosticCollector _diagnostics = new();
     private bool _timingBookmarksRequired;
     private readonly List<ExTapRoleSnapshot> _writtenExTapRoles = [];
     private readonly List<UmgrModel.Slide> _writtenSlides = [];
@@ -41,16 +42,17 @@ public sealed class MgxcChartWriter(MgxcWriteRequest request)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(request.Path);
         ArgumentNullException.ThrowIfNull(request.Chart);
-        var diagnostics = new DiagnosticCollector();
+        _diagnostics = new();
         try
         {
-            (_chart, _target) = EditorTargetRules.Project(request.Chart, request.Target, ugc: false, diagnostics);
+            (_chart, _target) = EditorTargetRules.Project(request.Chart, request.Target, ugc: false, _diagnostics);
         }
         catch (DiagnosticException ex)
         {
-            diagnostics.Report(ex.ToDiagnostic().WithPathFallback(request.Path));
-            return OperationResult.Failure().WithDiagnostics(diagnostics);
+            _diagnostics.Report(ex.ToDiagnostic().WithPathFallback(request.Path));
+            return OperationResult.Failure().WithDiagnostics(_diagnostics);
         }
+        _chart.Meta.Comment = ChartMediaPaths.CommentForOutput(_chart.Meta.Comment, _chart.Meta.FilePath, request.Path);
         CurveExpansion.Validate(_chart);
         _chart.Extras.FixedZeroOrigin |= _chart.Extras.UsesFixedCoordinateOrigin;
         _timingBookmarksRequired = (_chart.Extras.FixedZeroOrigin || _chart.Extras.PrerollBar1Applied) &&
@@ -78,10 +80,10 @@ public sealed class MgxcChartWriter(MgxcWriteRequest request)
         }
         catch (DiagnosticException ex)
         {
-            diagnostics.Report(ex.ToDiagnostic().WithPathFallback(request.Path));
-            return OperationResult.Failure().WithDiagnostics(diagnostics);
+            _diagnostics.Report(ex.ToDiagnostic().WithPathFallback(request.Path));
+            return OperationResult.Failure().WithDiagnostics(_diagnostics);
         }
-        return OperationResult.Success().WithDiagnostics(diagnostics);
+        return OperationResult.Success().WithDiagnostics(_diagnostics);
     }
 
     private void WriteFile(BinaryWriter bw)
@@ -223,7 +225,11 @@ public sealed class MgxcChartWriter(MgxcWriteRequest request)
                     WriteBookmark(bw, 0, ChartExtras.PrerollBar1Marker, DefaultBookmarkColor);
                 }
             }
-            WriteBookmark(bw, 0, _chart.Extras.ToBookmark(), DefaultBookmarkColor);
+            var metadata = C2SRoundTrip.WriteOptionalMetadata(_chart.Extras.ToBookmark, _diagnostics, request.Path);
+            if (metadata.Length > 0)
+            {
+                WriteBookmark(bw, 0, metadata, DefaultBookmarkColor);
+            }
         }
 
         foreach (var bookmark in _chart.Events.Children.OfType<UmgrModel.BookmarkEvent>()
@@ -828,18 +834,24 @@ public sealed class MgxcChartWriter(MgxcWriteRequest request)
         bw.Write(bytes);
     }
 
-    private static void WriteStringField(BinaryWriter bw, string name, string value)
+    private void WriteStringField(BinaryWriter bw, string name, string value)
     {
         bw.Write(Encoding.ASCII.GetBytes(name));
         var bytes = Encoding.UTF8.GetBytes(value ?? "");
-        if (bytes.Length > ushort.MaxValue)
+        var length = Math.Min(bytes.Length, ushort.MaxValue);
+        if (bytes.Length > length)
         {
-            throw new DiagnosticException(Msg.Create(MsgKeys.MgCrit_Mgxc_string_too_long,
-                name, bytes.Length, ushort.MaxValue));
+            // Exclude the entire character if the limit falls inside its UTF-8 sequence.
+            while ((bytes[length] & 0xC0) == 0x80)
+            {
+                length--;
+            }
+            _diagnostics.Report(new PathDiagnostic(Severity.Warning,
+                Msg.Create(MsgKeys.Warn_Mgxc_string_too_long, name, bytes.Length, length), request.Path));
         }
         bw.Write((short)4);
-        bw.Write((ushort)bytes.Length);
-        bw.Write(bytes);
+        bw.Write((ushort)length);
+        bw.Write(bytes, 0, length);
     }
 
     private static void WriteIntField(BinaryWriter bw, string name, int value)

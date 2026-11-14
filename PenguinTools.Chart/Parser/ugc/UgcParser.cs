@@ -101,6 +101,7 @@ public partial class UgcParser
 
         MediaValidator = mediaValidator;
         Path = request.Path;
+        Content = request.Content;
         Assets = request.Assets;
         Ugc.Meta.ExVersion = 0;
         Ugc.Meta.ExLongEnabled = false;
@@ -109,6 +110,7 @@ public partial class UgcParser
     private IMediaValidator MediaValidator { get; }
     private DiagnosticCollector Diagnostic { get; } = new();
     private string Path { get; }
+    private string? Content { get; }
     private AssetManager Assets { get; }
     private List<Task> Tasks { get; } = [];
     private UmgrModel.Chart Ugc { get; } = new();
@@ -118,7 +120,7 @@ public partial class UgcParser
         try
         {
             Ugc.Meta.FilePath = Path;
-            var lines = await ReadLinesAsync(Path, ct);
+            var lines = await ReadLinesAsync(Path, Content, ct);
 
             if (TryGetIgnoreLine(lines, out var ignoreLine))
             {
@@ -307,17 +309,20 @@ public partial class UgcParser
         }
     }
 
-    private static async Task<SourceLine[]> ReadLinesAsync(string path, CancellationToken ct)
+    private static async Task<SourceLine[]> ReadLinesAsync(string path, string? content, CancellationToken ct)
     {
-        var bytes = await File.ReadAllBytesAsync(path, ct);
-        string text;
-        try
+        var text = content;
+        if (text is null)
         {
-            text = new UTF8Encoding(false, true).GetString(bytes);
-        }
-        catch (DecoderFallbackException)
-        {
-            text = Encoding.GetEncoding(932).GetString(bytes);
+            var bytes = await File.ReadAllBytesAsync(path, ct);
+            try
+            {
+                text = new UTF8Encoding(false, true).GetString(bytes);
+            }
+            catch (DecoderFallbackException)
+            {
+                text = Encoding.GetEncoding(932).GetString(bytes);
+            }
         }
 
         using var reader = new StringReader(text.TrimStart('\uFEFF'));
@@ -439,6 +444,15 @@ public partial class UgcParser
                 ("title", Ugc.Meta.Title), ("sortName", Ugc.Meta.SortName))));
         }
 
+        if (!string.IsNullOrWhiteSpace(Ugc.Meta.WallFilePath))
+        {
+            QueueValidation(
+                MediaValidator.CheckImageValidAsync(Ugc.Meta.FullWallFilePath),
+                Ugc.Meta.FullWallFilePath,
+                MsgKeys.Error_Invalid_wall_image,
+                () => Ugc.Meta.WallImageValid = false);
+        }
+
         if (Ugc.Meta.IsCustomStage && !string.IsNullOrWhiteSpace(Ugc.Meta.FullBgiFilePath))
         {
             QueueValidation(
@@ -462,6 +476,7 @@ public partial class UgcParser
     private static bool TryGetIgnoreLine(SourceLine[] lines, out int lineNumber)
     {
         lineNumber = 0;
+        var comments = new List<string>();
         foreach (var line in lines)
         {
             if (!line.Text.StartsWith('@'))
@@ -481,16 +496,14 @@ public partial class UgcParser
             }
 
             var comment = tokens.Length >= 2 ? tokens[1] : string.Empty;
-            if (!ChartMetaCommands.IsIgnored(comment))
+            comments.Add(comment);
+            if (ChartMetaCommands.IsIgnored(comment))
             {
-                continue;
+                lineNumber = line.Number;
             }
-
-            lineNumber = line.Number;
-            return true;
         }
 
-        return false;
+        return ChartMetaCommands.IsIgnored(string.Join('\n', comments));
     }
 
     private readonly record struct SourceLine(int Number, string Text);

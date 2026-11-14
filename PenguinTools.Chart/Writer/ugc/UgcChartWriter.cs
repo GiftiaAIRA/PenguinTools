@@ -127,6 +127,7 @@ public sealed class UgcChartWriter(string path, U.Chart source, EditorTarget tar
                 diagnostics.Report(ex.ToDiagnostic().WithPathFallback(path));
                 return OperationResult.Failure().WithDiagnostics(diagnostics);
             }
+            _chart.Meta.Comment = ChartMediaPaths.CommentForOutput(_chart.Meta.Comment, _chart.Meta.FilePath, path);
             CurveExpansion.Expand(_chart);
             EditorProjection.CaptureAirColorKeys(_chart);
             EditorProjection.ClampUgcHeights(_chart);
@@ -142,7 +143,7 @@ public sealed class UgcChartWriter(string path, U.Chart source, EditorTarget tar
             }
             _rootOrdinal = 0;
             _crashOrdinal = 0;
-            _snapshots = new();
+            _snapshots = new() { HeightDigits = 2 };
             // Older extended readers use the origin marker as a fallback for
             // v8 fixed-width positions. v9 output always uses musical bars.
             _lines.Add($"'{MargreteInput.DialectPrefix} original");
@@ -187,15 +188,23 @@ public sealed class UgcChartWriter(string path, U.Chart source, EditorTarget tar
             _chart.Extras.CaptureUserText(m);
             _chart.Extras.RoundTripBookmarks = C2sRoundTripComment.FormatBookmarks(m).ToList();
             _snapshots.Capture(_chart.Extras, _lines, _chart.Meta.C2sSlaSnapshot);
-            var copyright = (_chart.Extras.SourceSnapshot.Length > 0 ? C2SRoundTrip.Pack(_chart.Extras.SourceSnapshot) : "") +
-                _chart.Extras.ToCopyright() + _chart.Extras.CopyrightWithTiming(Clean(m.Copyright));
+            var metadata = C2SRoundTrip.WriteOptionalMetadata(() =>
+                (_chart.Extras.SourceSnapshot.Length > 0 ? C2SRoundTrip.Pack(_chart.Extras.SourceSnapshot) : "") +
+                _chart.Extras.ToCopyright(), diagnostics, path);
+            var userCopyright = _chart.Extras.CopyrightWithTiming(Clean(m.Copyright));
             // Original editors copy this value into an unsigned 16-bit MGXC
             // string field. An oversized value can corrupt their saved file.
             // Extended readers migrate round-trip payloads into bookmarks,
             // but the user's copyright still occupies a native string field.
+            if (_target != EditorTarget.Extended && metadata.Length > 0 &&
+                Encoding.UTF8.GetByteCount(metadata + userCopyright) > ushort.MaxValue)
+            {
+                diagnostics.Report(new PathDiagnostic(Severity.Warning, Msg.Key(MsgKeys.Warn_Roundtrip_metadata_not_saved), path));
+                metadata = "";
+            }
             var copyrightBytes = Encoding.UTF8.GetByteCount(_target == EditorTarget.Extended
                 ? ChartExtras.CopyrightText(Clean(m.Copyright))
-                : copyright);
+                : metadata + userCopyright);
             if (copyrightBytes > ushort.MaxValue)
             {
                 diagnostics.Report(new Diagnostic(Severity.Error,
@@ -203,7 +212,7 @@ public sealed class UgcChartWriter(string path, U.Chart source, EditorTarget tar
                     .WithPathFallback(path));
                 return OperationResult.Failure().WithDiagnostics(diagnostics);
             }
-            _lines.Insert(1, "@COPYRIGHT\t" + copyright);
+            _lines.Insert(1, "@COPYRIGHT\t" + metadata + userCopyright);
             await AtomicFile.WriteAsync(path, async (stream, token) =>
             {
                 await using var writer = new StreamWriter(stream, new UTF8Encoding(false), leaveOpen: true);
@@ -260,7 +269,11 @@ public sealed class UgcChartWriter(string path, U.Chart source, EditorTarget tar
             $"@FLAG\tDIFFTTL\t{(_chart.Extras.Tutorial ? 1 : 0)}"]);
         _lines.AddRange([$"@SORT\t{Clean(m.SortName)}", $"@BGM\t{Clean(ChartMediaPaths.ForOutput(m.BgmFilePath, m.FilePath, path))}",
             $"@BGMOFS\t{m.BgmManualOffset}", $"@JACKET\t{Clean(ChartMediaPaths.ForOutput(m.JacketFilePath, m.FilePath, path))}",
-            $"@MAINTIL\t{m.MainTil}", $"@CMT\t{Clean(C2sRoundTripComment.Strip(m.Comment))}"]);
+            $"@MAINTIL\t{m.MainTil}"]);
+        foreach (var commentLine in C2sRoundTripComment.Strip(m.Comment).ReplaceLineEndings("\n").Split('\n'))
+        {
+            _lines.Add("@CMT\t" + commentLine.Replace('\t', ' '));
+        }
         _lines.Add($"@LICENSE\t{Clean(m.License)}\t{Clean(m.LicenseUrl)}");
         _lines.Add($"@GENRE\t{Clean(m.Genre?.Str ?? "")}");
         if (m.Difficulty == Difficulty.WorldsEnd)

@@ -60,8 +60,8 @@ public static class AtomicFile
                                        && (ex.HResult & 0xffff) is 32 or 33 or 1175
                                        && attempt < 15)
             {
-                // ReplaceFile can report 1175 for a transient delete lock; both
-                // original file names remain intact. Retry for at most 750 ms.
+                // On error 1175, both files retain their original names. Allow
+                // temporary failures to clear, with at most 750 ms of delay.
                 await Task.Delay(50, cancellationToken).ConfigureAwait(false);
             }
         }

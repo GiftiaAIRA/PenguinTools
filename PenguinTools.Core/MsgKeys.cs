@@ -6,6 +6,7 @@ public static class MsgKeys
     public const string App_Chart_file_not_found = "app.chart_file_not_found";
     public const string App_Config_path_conflict = "app.config_path_conflict";
     public const string App_Game_directory_not_found = "app.game_directory_not_found";
+    public const string App_Inputs_changed_during_export = "app.inputs_changed_during_export";
     public const string App_Input_directory_not_found = "app.input_directory_not_found";
     public const string App_No_charts_to_export = "app.no_charts_to_export";
     public const string App_No_export_actions_enabled = "app.no_export_actions_enabled";
@@ -24,6 +25,7 @@ public static class MsgKeys
     public const string Cli_Msg_assets_collected = "cli.msg.assets_collected";
     public const string Cli_Msg_audio_exported = "cli.msg.audio_exported";
     public const string Cli_Msg_built_stage = "cli.msg.built_stage";
+    public const string Cli_Msg_built_wall = "cli.msg.built_wall";
     public const string Cli_Msg_chart_written = "cli.msg.chart_written";
     public const string Cli_Msg_command_line_parsing_failed = "cli.msg.command_line_parsing_failed";
     public const string Cli_Msg_exported_music = "cli.msg.exported_music";
@@ -65,6 +67,10 @@ public static class MsgKeys
     public const string Warn_Editor_undefined_timeline_speed = "diag.warn.editor_undefined_timeline_speed";
     public const string Warn_Number_adjusted = "diag.warn.number_adjusted";
     public const string Warn_Note_width_adjusted = "diag.warn.note_width_adjusted";
+    public const string Warn_Mgxc_string_too_long = "diag.warn.mgxc_string_too_long";
+    public const string Warn_Invalid_metadata = "diag.warn.invalid_metadata";
+    public const string Warn_Roundtrip_metadata_ignored = "diag.warn.roundtrip_metadata_ignored";
+    public const string Warn_Roundtrip_metadata_not_saved = "diag.warn.roundtrip_metadata_not_saved";
     public const string Error_Command_failed = "diag.error.command_failed";
     public const string Error_Effect_file_not_found = "diag.error.effect_file_not_found";
     public const string Error_File_ignored_due_to_id_missing = "diag.error.file_ignored_due_to_id_missing";
@@ -74,15 +80,23 @@ public static class MsgKeys
     public const string Error_Invalid_bg_image = "diag.error.invalid_bg_image";
     public const string Error_Invalid_Header = "diag.error.invalid_header";
     public const string Error_Invalid_jk_image = "diag.error.invalid_jk_image";
+    public const string Error_Invalid_wall_image = "diag.error.invalid_wall_image";
     public const string Error_Jacket_file_not_found = "diag.error.jacket_file_not_found";
     public const string Error_Main_meta_is_null = "diag.error.main_meta_is_null";
     public const string Error_Main_difficulty_invalid = "diag.error.main_difficulty_invalid";
     public const string Error_Preview_stop_greater_than_start = "diag.error.preview_stop_greater_than_start";
     public const string Error_Size_Incompatible = "diag.error.size_incompatible";
+    public const string Error_Event_id_invalid = "diag.error.event_id_invalid";
+    public const string Error_Difficulty_id_invalid = "diag.error.difficulty_id_invalid";
+    public const string Error_Song_id_invalid = "diag.error.song_id_invalid";
     public const string Error_Song_id_is_not_set = "diag.error.song_id_is_not_set";
     public const string Error_Stage_background_required = "diag.error.stage_background_required";
     public const string Error_Stage_id_is_not_set = "diag.error.stage_id_is_not_set";
     public const string Error_Unhandled = "diag.error.unhandled";
+    public const string Error_Wall_conflict = "diag.error.wall_conflict";
+    public const string Error_Wall_id_invalid = "diag.error.wall_id_invalid";
+    public const string Error_Wall_source_required = "diag.error.wall_source_required";
+    public const string Error_Wall_width_invalid = "diag.error.wall_width_invalid";
     public const string Hint_Preview_start_clamped = "diag.hint.preview_start_clamped";
     public const string Hint_Preview_stop_clamped = "diag.hint.preview_stop_clamped";
     public const string Mg_Concurrent_ex_effects = "diag.mg.concurrent_ex_effects";
@@ -92,7 +106,6 @@ public static class MsgKeys
     public const string Mg_Length_smaller_than_unit = "diag.mg.length_smaller_than_unit";
     public const string Mg_Main_timeline_not_found = "diag.mg.main_timeline_not_found";
     public const string Mg_Meta_Argument_count_min_one = "diag.mg.meta_argument_count_min_one";
-    public const string Mg_Meta_First_argument_must_int = "diag.mg.meta_first_argument_must_int";
     public const string Mg_Meta_Invalid_date = "diag.mg.meta_invalid_date";
     public const string Mg_Meta_Ignored = "diag.mg.meta_ignored";
     public const string Mg_Meta_Unknown_tag = "diag.mg.meta_unknown_tag";
@@ -114,7 +127,6 @@ public static class MsgKeys
     public const string MgCrit_Unrecognized_event = "diag.mgcrit.unrecognized_event";
     public const string MgCrit_Ugc_air_attachment_order = "diag.mgcrit.ugc_air_attachment_order";
     public const string MgCrit_Ugc_metadata_too_long = "diag.mgcrit.ugc_metadata_too_long";
-    public const string MgCrit_Mgxc_string_too_long = "diag.mgcrit.mgxc_string_too_long";
     public const string MgCrit_Unsupported_legacy_crash = "diag.mgcrit.unsupported_legacy_crash";
     public const string MgCrit_Legacy_crash_attributes = "diag.mgcrit.legacy_crash_attributes";
     public const string MgCrit_Editor_target_feature = "diag.mgcrit.editor_target_feature";
@@ -139,6 +151,8 @@ public static class MsgKeys
     public const string Warn_More_than_one_chart_marked_main = "diag.warn.more_than_one_chart_marked_main";
     public const string Warn_No_chart_marked_main = "diag.warn.no_chart_marked_main";
     public const string Warn_Preview_later_than_120 = "diag.warn.preview_later_than_120";
+    public const string Warn_Field_line_unknown = "diag.warn.field_line_unknown";
     public const string Warn_Stage_already_exists = "diag.warn.stage_already_exists";
+    public const string Warn_Wall_already_exists = "diag.warn.wall_already_exists";
     public const string Warn_We_chart_must_be_unique_id = "diag.warn.we_chart_must_be_unique_id";
 }

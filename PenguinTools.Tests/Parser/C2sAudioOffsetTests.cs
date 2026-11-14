@@ -445,13 +445,6 @@ public sealed class C2sAudioOffsetTests
     }
 
     [Theory]
-    [InlineData(32748, false, false)]
-    [InlineData(32749, false, false)]
-    [InlineData(32767, false, false)]
-    [InlineData(32767, true, false)]
-    [InlineData(32728, false, true)]
-    [InlineData(32729, false, true)]
-    [InlineData(32767, true, true)]
     [InlineData(65516, false, false)]
     [InlineData(65517, false, false)]
     [InlineData(65535, false, false)]

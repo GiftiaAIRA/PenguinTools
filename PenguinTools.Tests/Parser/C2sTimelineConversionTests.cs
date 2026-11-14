@@ -202,7 +202,7 @@ public sealed class C2sTimelineConversionTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public void SlaSnapshot_IsDroppedWhenNonZeroTimelinesChange(bool missingKey)
+    public void SlaSnapshot_IsDroppedWhenNonZeroTimelinesChange(bool missingEditKey)
     {
         var source = new C2sChart();
         source.Notes.Add(new Tap
@@ -231,7 +231,7 @@ public sealed class C2sTimelineConversionTests
         var tap = Assert.Single(
             converted.Value.Notes.Children.OfType<PenguinTools.Chart.Models.umgr.Tap>());
         tap.Timeline = 2;
-        if (missingKey)
+        if (missingEditKey)
         {
             converted.Value.Meta.C2sSlaEditKey = null;
         }
@@ -288,7 +288,7 @@ public sealed class C2sTimelineConversionTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public void SlpSnapshot_IsDroppedWhenSpeedValueChanges(bool missingKey)
+    public void SlpSnapshot_IsDroppedWhenSpeedValueChanges(bool missingEditKey)
     {
         var source = new C2sChart();
         source.Events.Add(new Slp
@@ -313,7 +313,7 @@ public sealed class C2sTimelineConversionTests
                  x.Timeline == 0);
 
         speed.Speed = 0.751m;
-        if (missingKey)
+        if (missingEditKey)
         {
             converted.Value.Meta.C2sSlpEditKey = null;
         }

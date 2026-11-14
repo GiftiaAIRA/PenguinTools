@@ -4,6 +4,7 @@ using PenguinTools.Chart;
 using PenguinTools.Core;
 using PenguinTools.Core.Asset;
 using PenguinTools.Core.Diagnostic;
+using PenguinTools.Core.Metadata;
 
 namespace PenguinTools.Application;
 
@@ -79,7 +80,14 @@ public sealed record ChartConversionMetadata(
     string SortName,
     int? UnlockEventId,
     string ReleaseDate,
-    int MainTil);
+    int MainTil)
+{
+    public string WallFilePath { get; init; } = "";
+    public string FullWallFilePath { get; init; } = "";
+    public int? WallId { get; init; }
+    public int? ExplicitWallId { get; init; }
+    public WallWidth WallWidth { get; init; } = WallWidth.Wide;
+}
 
 public sealed record ChartInspectRequest(
     string InputPath);
@@ -156,7 +164,14 @@ public sealed record OptionScanDifficulty(
     string BgiFilePath,
     ApplicationEntry NotesFieldLine,
     ApplicationEntry Stage,
-    IReadOnlyList<ApplicationDiagnostic> Diagnostics);
+    IReadOnlyList<ApplicationDiagnostic> Diagnostics)
+{
+    public string WallFilePath { get; init; } = "";
+    public string FullWallFilePath { get; init; } = "";
+    public int? WallId { get; init; }
+    public int? ExplicitWallId { get; init; }
+    public WallWidth WallWidth { get; init; } = WallWidth.Wide;
+}
 
 public sealed record OptionScanBook(
     int? SongId,
@@ -185,7 +200,14 @@ public sealed record OptionScanBook(
     decimal BgmInitialBpm,
     int BgmInitialNumerator,
     int BgmInitialDenominator,
-    IReadOnlyList<OptionScanDifficulty> Charts);
+    IReadOnlyList<OptionScanDifficulty> Charts)
+{
+    public string WallFilePath { get; init; } = "";
+    public string FullWallFilePath { get; init; } = "";
+    public int? WallId { get; init; }
+    public int? ExplicitWallId { get; init; }
+    public WallWidth WallWidth { get; init; } = WallWidth.Wide;
+}
 
 public sealed record OptionMainDifficultyOverride(int SongId, string MainDifficulty);
 
@@ -211,7 +233,10 @@ public sealed record OptionScanConfig(
     bool OverrideChartGenre,
     int UltimaEventId,
     int WeEventId,
-    int BatchSize);
+    int BatchSize)
+{
+    public bool ConvertWall { get; init; } = true;
+}
 
 public sealed record OptionScanResult(
     string InputDirectory,
@@ -240,7 +265,7 @@ public sealed record OptionBuildOverrides(
     bool? ConvertAudio = null,
     bool? ConvertJacket = null,
     bool? ConvertBackground = null,
-    ulong? HcaEncryptionKey = null,
+    [property: JsonNumberHandling(JsonNumberHandling.AllowReadingFromString)] ulong? HcaEncryptionKey = null,
     bool? GenerateEventXml = null,
     bool? CustomReleaseTagXml = null,
     int? SelectedReleaseTagId = null,
@@ -253,7 +278,8 @@ public sealed record OptionBuildOverrides(
     bool? OverrideChartGenre = null,
     int? UltimaEventId = null,
     int? WeEventId = null,
-    IReadOnlyList<OptionMainDifficultyOverride>? MainDifficulties = null);
+    IReadOnlyList<OptionMainDifficultyOverride>? MainDifficulties = null,
+    bool? ConvertWall = null);
 
 public sealed record OptionBuildRequest(
     string InputDirectory,
@@ -288,54 +314,6 @@ public sealed record StageOverrides(
     int? NoteFieldLaneId = null,
     string? NoteFieldLaneName = null,
     string? NoteFieldLaneData = null);
-
-public sealed record MusicBuildOverrides(
-    int? SongId = null,
-    string? Title = null,
-    string? Artist = null,
-    string? Designer = null,
-    int? DifficultyId = null,
-    decimal? Level = null,
-    decimal? MainBpm = null,
-    bool? InsertBlankMeasure = null,
-    int? GenreId = null,
-    string? GenreName = null,
-    int? WeTagId = null,
-    string? WeTagName = null,
-    int? WeDifficultyId = null,
-    bool? IsCustomStage = null,
-    int? StageId = null,
-    int? NotesFieldLineId = null,
-    string? NotesFieldLineName = null,
-    string? NotesFieldLineData = null,
-    int? StageEntryId = null,
-    string? StageEntryName = null,
-    decimal? BgmPreviewStart = null,
-    decimal? BgmPreviewStop = null,
-    decimal? BgmManualOffset = null,
-    decimal? BgmInitialBpm = null,
-    int? BgmInitialNumerator = null,
-    int? BgmInitialDenominator = null,
-    string? SortName = null,
-    int? UnlockEventId = null,
-    string? ReleaseDate = null,
-    int? MainTil = null);
-
-public sealed record MusicBuildRequest(
-    string InputPath,
-    string OutputDirectory,
-    string? JacketInputPath = null,
-    AudioOverrides? Audio = null,
-    StageOverrides? Stage = null,
-    MusicBuildOverrides? Overrides = null);
-
-public sealed record MusicBuildResult(
-    string InputPath,
-    string OutputDirectory,
-    ChartSummary Chart,
-    int? StageId,
-    string? StageName,
-    IReadOnlyList<ApplicationArtifact> Artifacts);
 
 public sealed record JacketConvertRequest(string InputPath, string OutputPath, string? JacketInputPath = null);
 
@@ -465,6 +443,8 @@ public sealed record ApplicationInfo(
 
 public interface IPenguinToolsApplication : IDisposable
 {
+    IncrementalBuildSession CreateBuildSession();
+
     Task<OperationResult<ChartInspectResult>> InspectChartAsync(ChartInspectRequest request,
         CancellationToken cancellationToken = default);
 
@@ -475,9 +455,6 @@ public interface IPenguinToolsApplication : IDisposable
         IProgress<ProgressReport>? progress = null, CancellationToken cancellationToken = default);
 
     Task<OperationResult<OptionBuildResult>> BuildOptionAsync(OptionBuildRequest request,
-        IProgress<ProgressReport>? progress = null, CancellationToken cancellationToken = default);
-
-    Task<OperationResult<MusicBuildResult>> BuildMusicAsync(MusicBuildRequest request,
         IProgress<ProgressReport>? progress = null, CancellationToken cancellationToken = default);
 
     Task<OperationResult<JacketConvertResult>> ConvertJacketAsync(JacketConvertRequest request,
@@ -497,6 +474,12 @@ public interface IPenguinToolsApplication : IDisposable
 
     Task<OperationResult<MusicExtractResult>> ExtractMusicAsync(MusicExtractRequest request,
         IProgress<ProgressReport>? progress = null, CancellationToken cancellationToken = default);
+
+    Task<OperationResult<WallBuildResult>> BuildWallAsync(WallBuildRequest request,
+        CancellationToken cancellationToken = default);
+
+    Task<OperationResult<WallBuildResult>> BuildWallFilesAsync(WallFilesBuildRequest request,
+        CancellationToken cancellationToken = default);
 
     Task<OperationResult<StageBuildResult>> BuildStageAsync(StageBuildRequest request,
         CancellationToken cancellationToken = default);

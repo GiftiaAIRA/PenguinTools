@@ -50,7 +50,7 @@ public sealed class EditorTargetTests
     [InlineData(EditorTarget.Legacy)]
     [InlineData(EditorTarget.Standard)]
     [InlineData(EditorTarget.Extended)]
-    public async Task MgxcNativeText_UsesUnsignedLengthAndRejectsOverflow(EditorTarget target)
+    public async Task MgxcNativeText_UsesUnsignedLengthAndTruncatesOverflow(EditorTarget target)
     {
         var chart = new U.Chart();
         chart.Events.AppendChild(new U.BpmEvent { Bpm = 120 });
@@ -70,12 +70,12 @@ public sealed class EditorTargetTests
                 Assert.True(restored.Extras.FixedZeroOrigin);
             }
 
+            var full = chart.Meta.Title;
             chart.Meta.Title += "A";
-            await File.WriteAllTextAsync(path, "existing chart", Ct);
             var result = await new MgxcChartWriter(new(path, chart, target)).WriteAsync(Ct);
-            Assert.False(result.Succeeded);
-            Assert.Contains(result.Diagnostics.Diagnostics, d => d.Message.Key == MsgKeys.MgCrit_Mgxc_string_too_long);
-            Assert.Equal("existing chart", await File.ReadAllTextAsync(path, Ct));
+            Assert.True(result.Succeeded, result.ToString());
+            Assert.Contains(result.Diagnostics.Diagnostics, d => d.Message.Key == MsgKeys.Warn_Mgxc_string_too_long);
+            Assert.Equal(full, (await Read(path)).Meta.Title);
             Assert.Equal(65536, Encoding.UTF8.GetByteCount(chart.Meta.Title));
         }
         finally { File.Delete(path); }
@@ -85,7 +85,7 @@ public sealed class EditorTargetTests
     [InlineData(EditorTarget.Legacy)]
     [InlineData(EditorTarget.Standard)]
     [InlineData(EditorTarget.Extended)]
-    public async Task LargeRoundTripPayload_RequiresAnEditorWithBookmarkMigration(EditorTarget target)
+    public async Task LargeRoundTripPayload_IsDroppedFromOriginalEditorUgc(EditorTarget target)
     {
         var chart = new U.Chart();
         chart.Events.AppendChild(new U.BpmEvent { Bpm = 120 });
@@ -106,9 +106,10 @@ public sealed class EditorTargetTests
             }
             else
             {
-                Assert.False(result.Succeeded);
-                Assert.Contains(result.Diagnostics.Diagnostics, d => d.Message.Key == MsgKeys.MgCrit_Ugc_metadata_too_long);
-                Assert.Equal("existing chart", await File.ReadAllTextAsync(text, Ct));
+                // The chart is still written; only the oversized round-trip payload is left out.
+                Assert.True(result.Succeeded, result.ToString());
+                Assert.Contains(result.Diagnostics.Diagnostics, d => d.Message.Key == MsgKeys.Warn_Roundtrip_metadata_not_saved);
+                Assert.NotEqual(snapshot, (await Read(text)).Extras.SourceSnapshot);
             }
             // All targets can retain this payload in the wider MGXC bookmark field.
             Assert.True((await new MgxcChartWriter(new(binary, chart, target)).WriteAsync(Ct)).Succeeded);
@@ -135,7 +136,15 @@ public sealed class EditorTargetTests
             Assert.True((await new UgcChartWriter(path, chart, target).WriteAsync(Ct)).Succeeded);
             header = (await File.ReadAllLinesAsync(path, Ct)).Single(l => l.StartsWith("@COPYRIGHT\t", StringComparison.Ordinal));
             Assert.Equal(ushort.MaxValue, Encoding.UTF8.GetByteCount(header[11..]));
+            // One more character: the round-trip data is dropped so the field still fits.
             chart.Meta.Copyright += "中";
+            var trimmed = await new UgcChartWriter(path, chart, target).WriteAsync(Ct);
+            Assert.True(trimmed.Succeeded, trimmed.ToString());
+            Assert.Contains(trimmed.Diagnostics.Diagnostics, d => d.Message.Key == MsgKeys.Warn_Roundtrip_metadata_not_saved);
+            header = (await File.ReadAllLinesAsync(path, Ct)).Single(l => l.StartsWith("@COPYRIGHT\t", StringComparison.Ordinal));
+            Assert.True(Encoding.UTF8.GetByteCount(header[11..]) <= ushort.MaxValue);
+            // A copyright text that alone exceeds the field still fails and keeps the old file.
+            chart.Meta.Copyright = new string('A', ushort.MaxValue + 1);
             await File.WriteAllTextAsync(path, "existing chart", Ct);
             var result = await new UgcChartWriter(path, chart, target).WriteAsync(Ct);
             Assert.False(result.Succeeded);
