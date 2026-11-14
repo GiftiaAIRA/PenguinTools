@@ -1,10 +1,14 @@
-# PenguinTools
+# PenguinTools Extend
 
 Tools for converting CHUNITHM charts, music, jackets, and stages.
 
-图形界面请移至 [PenguinTools.UI](https://github.com/ChuniPingu/PenguinTools.UI/releases/latest)。
+PenguinTools Extend is a fork of [PenguinTools](https://github.com/ChuniPingu/PenguinTools) by Foahh. It adds support for charts from extended Margrete releases (2.3 and later): automatic editor detection, Margrete 1.8 and 1.9 output targets, and the extended editor's chart data. See [editor targets](docs/chart-conversion.md#editor-targets).
 
-For the graphical interface, visit [PenguinTools.UI](https://github.com/ChuniPingu/PenguinTools.UI/releases/latest).
+企鹅工具箱 Extend 基于 Foahh 的企鹅工具箱。它在原版功能之外，支持扩展版 Margrete（2.3 及以后）的谱面。问题请在本仓库反馈，不要提交到原项目。
+
+图形界面请移至 [PenguinTools.UI Extend](https://github.com/GiftiaAIRA/PenguinTools.UI/releases/latest)。
+
+For the graphical interface, visit [PenguinTools.UI Extend](https://github.com/GiftiaAIRA/PenguinTools.UI/releases/latest).
 
 ## Prerequisites
 
@@ -15,7 +19,7 @@ Use the versions selected by [global.json](global.json), [Common.props](Common.p
 ## Quick start
 
 ```powershell
-git clone --recurse-submodules https://github.com/ChuniPingu/PenguinTools.git
+git clone --recurse-submodules https://github.com/GiftiaAIRA/PenguinTools.git
 cd PenguinTools
 dotnet restore PenguinTools.slnx
 dotnet build PenguinTools.slnx -c Release

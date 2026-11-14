@@ -62,7 +62,7 @@ Tests using local sample files may skip. See [testing](testing.md) for fixture c
 The version comes from `Common.props`. Write user-facing notes in `docs/changelog/X.Y.Z.md`, including command migrations when needed. Commit the intended source state, create and push its `vX.Y.Z` tag, then run:
 
 ```powershell
-.\release.ps1 -Repository ChuniPingu/PenguinTools -NotesFile docs/changelog/X.Y.Z.md
+.\release.ps1 -Repository GiftiaAIRA/PenguinTools -NotesFile docs/changelog/X.Y.Z.md
 ```
 
 Select the repository you are publishing to. The script defaults to `ChuniPingu/PenguinTools`, requires the remote version tag and a clean working tree, builds both publish profiles, and uploads CLI ZIP files to GitHub Releases.
