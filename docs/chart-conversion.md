@@ -75,7 +75,7 @@ UMIGURI ignores SPDMOD on a timeline without a TIL definition. Margrete can crea
 
 ## Approximation and round trips
 
-MGXC retains Bezier handles; UGC and C2S expand curves. Unsupported geometry, AIR colors, and meter changes are approximated with `diag.warn.editor_approximation`; original values are retained in checksum-validated metadata. SLIDE line visibility follows the start without a warning.
+MGXC retains Bezier handles; UGC and C2S expand curves. Unsupported geometry, AIR colors, and meter changes are approximated with `diag.warn.editor_approximation`; original values are retained in checksum-validated metadata. SLIDE line visibility follows the start without a warning, except in extended-editor charts that switch the line partway through a SLIDE. C2S output splits such a SLIDE into separate paths and reports `diag.warn.c2s_segmented_slide_judgements`, because the game treats each part as its own SLIDE; start and step judgement counts can change. In-game judgement counts for these charts have not been verified.
 
 For AIR-HOLD and AIR-SLIDE, Invert is set on the AIR arrow and applies to the entire long note. MGXC input uses the leading AIR record's inversion, and MGXC, UGC, and C2S output retain it for the whole note. The long-note record does not provide an independent body-color setting.
 
