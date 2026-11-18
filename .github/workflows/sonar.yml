@@ -18,7 +18,9 @@ jobs:
   sonar:
     name: Sonar quality gate
     # Fork and Dependabot pull requests cannot access the analysis secret.
+    # Repositories without a configured Sonar project (such as forks) skip it.
     if: >-
+      vars.SONAR_PROJECT_KEY != '' &&
       github.actor != 'dependabot[bot]' &&
       (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: windows-latest
