@@ -164,6 +164,7 @@ public sealed partial class ChartExtras
             string.Empty, RegexOptions.CultureInvariant, TimeSpan.FromSeconds(1));
         return string.Join(';', text.Split(';').Where(token =>
             token.Trim() != FixedZeroOriginMarker && token.Trim() != PrerollBar1Marker &&
+            !token.Trim().StartsWith(NativeExTapRoles.Prefix, StringComparison.Ordinal) &&
             !token.Trim().StartsWith("MGR_CLKCNT=", StringComparison.Ordinal)));
     }
 

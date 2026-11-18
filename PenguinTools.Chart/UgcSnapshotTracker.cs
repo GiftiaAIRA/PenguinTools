@@ -13,6 +13,8 @@ internal sealed class UgcSnapshotTracker
     private readonly List<Entry> _entries = [];
     private Entry? _current;
 
+    internal IEnumerable<U.ExTap> WrittenExTaps => _entries.Select(entry => entry.Note).OfType<U.ExTap>();
+
     // Height digits per AIR-SLIDE/AIR-CRUSH head, set by the parser from HIPRECISION.
     internal int HeightDigits { get; set; } = 1;
 

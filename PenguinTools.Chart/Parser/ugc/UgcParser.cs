@@ -21,6 +21,7 @@ public partial class UgcParser
     private int? _declaredVersion;
     private bool _highPrecision;
     private bool _fixedBarCoordinates;
+    private string _copyright = "";
     private readonly List<UmgrModel.Note?> _sourceRoots = [];
 
     private int Lane(char value)
@@ -170,6 +171,10 @@ public partial class UgcParser
             Ugc.Extras.CheckEventView(Ugc);
             var (matches, contextValid, slaValid) = _snapshots.Validate(Ugc.Extras, lines.Select(l => l.Text).ToArray(), Ugc.Meta.C2sSlaSnapshot);
             RestoreExTapSnapshots(matches);
+            if (!NativeExTapRoles.Restore(Ugc, _copyright))
+            {
+                Diagnostic.Report(new Diagnostic(Severity.Warning, Msg.Key(MsgKeys.Warn_Ex_tap_roles_not_restored)));
+            }
             var post = new ChartPostProcessor(Ugc, Diagnostic, Assets);
             post.Run();
             var eligible = Ugc.Extras.BinarySnapshotValid ? null : matches.Keys.SelectMany(n => new[] { n }.Concat(n.Children)).ToHashSet();

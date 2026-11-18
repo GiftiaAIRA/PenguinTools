@@ -225,14 +225,15 @@ public partial class UgcParser
 
     private void HandleCopyright(string[] args)
     {
-        Ugc.Meta.Copyright = ChartExtras.CopyrightText(Str(args));
-        if (Str(args).Contains("PT_C2S_", StringComparison.Ordinal))
+        _copyright = Str(args);
+        Ugc.Meta.Copyright = ChartExtras.CopyrightText(_copyright);
+        if (_copyright.Contains("PT_C2S_", StringComparison.Ordinal))
         {
-            Ugc.Extras = ChartExtras.FromCopyright(Str(args), WarnInvalidRoundtripMetadata);
+            Ugc.Extras = ChartExtras.FromCopyright(_copyright, WarnInvalidRoundtripMetadata);
         }
         else
         {
-            Ugc.Extras.ReadCopyright(Str(args), WarnInvalidRoundtripMetadata);
+            Ugc.Extras.ReadCopyright(_copyright, WarnInvalidRoundtripMetadata);
         }
 
         C2sRoundTripComment.Absorb(Ugc.Meta, Ugc.Extras.RoundTripBookmarks);

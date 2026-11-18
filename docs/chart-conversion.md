@@ -83,7 +83,7 @@ Saved C2S record order is restored only when it preserves paths and AIR relation
 
 AIR-CRUSH axes `N/Y/Z` map to C2S `DEF/AxisY/AxisZ`. The separate C2S `Trace` style uses default X-axis lines in MGXC/UGC, with the original attribute restored from validated metadata. Colors follow palette appearance, including `PNK → Y` and `VLT → B`.
 
-MGXC stores EXTAP roles in validated metadata without repurposing native height fields. Note edits invalidate roles in the same timing group; title and artist edits preserve them.
+MGXC stores EXTAP roles in validated metadata without repurposing native height fields. MGXC and UGC also carry a compact marker in the native copyright field for independent EX taps that overlap a long-note head. This lets PenguinTools recover their `CHR` records after a Margrete save or export even when the editor discards the format-specific snapshot. The marker is hidden from the copyright text shown by PenguinTools. A change to the matching note group invalidates its saved roles and reports a warning; unrelated edits and title changes leave them intact. If the copyright field has no room for the marker, the writer reports that it could not save round-trip metadata.
 
 In UGC output, PenguinTools retains original C2S roles in validated metadata. Title and author edits preserve restoration; note edits invalidate the affected group, including AIR attachments and EX coverage. Timing changes invalidate all note snapshots. Meters and SLA regions have separate checks, so unrelated note edits can preserve them.
 

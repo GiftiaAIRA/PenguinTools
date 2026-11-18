@@ -24,6 +24,7 @@ public sealed class MgxcChartWriter(MgxcWriteRequest request)
     private DiagnosticCollector _diagnostics = new();
     private bool _timingBookmarksRequired;
     private readonly List<ExTapRoleSnapshot> _writtenExTapRoles = [];
+    private readonly List<UmgrModel.ExTap> _writtenExTaps = [];
     private readonly List<UmgrModel.Slide> _writtenSlides = [];
     private readonly List<UmgrModel.Note> _writtenCurvePaths = [];
     private byte[] _writtenNotePayload = [];
@@ -170,9 +171,16 @@ public sealed class MgxcChartWriter(MgxcWriteRequest request)
         WriteStringField(bw, "atls", m.Authors);
         WriteStringField(bw, "atst", m.AuthorSites);
         WriteStringField(bw, "durl", m.DownloadUrl);
-        WriteStringField(bw, "lcpy", _timingBookmarksRequired
+        var copyright = _timingBookmarksRequired
             ? ChartExtras.CopyrightText(m.Copyright)
-            : _chart.Extras.CopyrightWithTiming(m.Copyright));
+            : _chart.Extras.CopyrightWithTiming(m.Copyright);
+        var roles = NativeExTapRoles.Capture(_chart.Notes.Children.OfType<UmgrModel.ExTapableNote>(), _writtenExTaps);
+        if (roles.Length > 0 && Encoding.UTF8.GetByteCount(copyright) + (long)roles.Length > ushort.MaxValue)
+        {
+            _diagnostics.Report(new PathDiagnostic(Severity.Warning, Msg.Key(MsgKeys.Warn_Roundtrip_metadata_not_saved), request.Path));
+            roles = "";
+        }
+        WriteStringField(bw, "lcpy", roles + copyright);
         WriteStringField(bw, "ltyp", m.License);
         WriteStringField(bw, "lurl", m.LicenseUrl);
         WriteIntField(bw, "xver", m.ExVersion);
@@ -297,6 +305,7 @@ public sealed class MgxcChartWriter(MgxcWriteRequest request)
         _writtenSlides.Clear();
         _writtenCurvePaths.Clear();
         _writtenExTapRoles.Clear();
+        _writtenExTaps.Clear();
         _chart.Extras.AirAppearances.Clear();
         foreach (var tick in _chart.Extras.ClickTicks)
         {
@@ -360,6 +369,7 @@ public sealed class MgxcChartWriter(MgxcWriteRequest request)
     private void WriteExTapNote(BinaryWriter bw, UmgrModel.ExTap ex)
     {
         _writtenExTapRoles.Add(RoleOf(ex));
+        _writtenExTaps.Add(ex);
         WriteNote(bw, new NoteFormat(NoteType.ExTap, LongAttr.None, EffectDirection(ex.Effect), ExAttr.None, 0),
             new NotePosition(ex.Lane, ex.Width, DefaultHeight, ex.Tick.Original, ex.Timeline));
 
@@ -521,6 +531,15 @@ public sealed class MgxcChartWriter(MgxcWriteRequest request)
         }
 
         _writtenExTapRoles.Add(new(plan.Role, UmgrModel.AirActionCarrierParent.None, Joint.D, false));
+        _writtenExTaps.Add(new UmgrModel.ExTap
+        {
+            Tick = note.Tick,
+            Lane = note.Lane,
+            Width = note.Width,
+            Timeline = plan.Timeline,
+            Effect = plan.Effect,
+            Role = plan.Role
+        });
         WriteNote(bw, new NoteFormat(NoteType.ExTap, LongAttr.None, EffectDirection(plan.Effect), ExAttr.None, 0),
             new NotePosition(note.Lane, note.Width, DefaultHeight, note.Tick.Original, plan.Timeline));
     }
@@ -647,6 +666,7 @@ public sealed class MgxcChartWriter(MgxcWriteRequest request)
         }
 
         _writtenExTapRoles.Add(RoleOf(carrier));
+        _writtenExTaps.Add(carrier);
 
         WriteNote(bw, new NoteFormat(NoteType.ExTap, LongAttr.None, EffectDirection(carrier.Effect), ExAttr.None, 0),
             new NotePosition(carrier.Lane, carrier.Width, DefaultHeight, carrier.Tick.Original, carrier.Timeline));

@@ -192,12 +192,18 @@ public sealed class UgcChartWriter(string path, U.Chart source, EditorTarget tar
                 (_chart.Extras.SourceSnapshot.Length > 0 ? C2SRoundTrip.Pack(_chart.Extras.SourceSnapshot) : "") +
                 _chart.Extras.ToCopyright(), diagnostics, path);
             var userCopyright = _chart.Extras.CopyrightWithTiming(Clean(m.Copyright));
+            var roles = NativeExTapRoles.Capture(_chart.Notes.Children.OfType<U.ExTapableNote>(), _snapshots.WrittenExTaps);
+            if (roles.Length > 0 && Encoding.UTF8.GetByteCount(userCopyright) + (long)roles.Length > ushort.MaxValue)
+            {
+                diagnostics.Report(new PathDiagnostic(Severity.Warning, Msg.Key(MsgKeys.Warn_Roundtrip_metadata_not_saved), path));
+                roles = "";
+            }
             // Original editors copy this value into an unsigned 16-bit MGXC
             // string field. An oversized value can corrupt their saved file.
             // Extended readers migrate round-trip payloads into bookmarks,
             // but the user's copyright still occupies a native string field.
             if (_target != EditorTarget.Extended && metadata.Length > 0 &&
-                Encoding.UTF8.GetByteCount(metadata + userCopyright) > ushort.MaxValue)
+                Encoding.UTF8.GetByteCount(metadata + roles + userCopyright) > ushort.MaxValue)
             {
                 diagnostics.Report(new PathDiagnostic(Severity.Warning, Msg.Key(MsgKeys.Warn_Roundtrip_metadata_not_saved), path));
                 metadata = "";
@@ -212,7 +218,7 @@ public sealed class UgcChartWriter(string path, U.Chart source, EditorTarget tar
                     .WithPathFallback(path));
                 return OperationResult.Failure().WithDiagnostics(diagnostics);
             }
-            _lines.Insert(1, "@COPYRIGHT\t" + metadata + userCopyright);
+            _lines.Insert(1, "@COPYRIGHT\t" + metadata + roles + userCopyright);
             await AtomicFile.WriteAsync(path, async (stream, token) =>
             {
                 await using var writer = new StreamWriter(stream, new UTF8Encoding(false), leaveOpen: true);

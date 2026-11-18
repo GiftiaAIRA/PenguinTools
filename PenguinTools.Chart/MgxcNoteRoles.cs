@@ -47,13 +47,13 @@ internal static class MgxcNoteRoles
     }
 
     internal static void Restore(ReadOnlySpan<byte> payload, IReadOnlyList<EditorNoteSnapshot> snapshots,
-        IEnumerable<U.ExTap> notes)
+        IEnumerable<U.ExTap> notes, int version)
     {
         if (snapshots.Count == 0)
         {
             return;
         }
-        var records = Read(payload);
+        var records = Read(payload, version);
         var keys = Keys(records);
         var saved = snapshots.GroupBy(s => s.Key).ToDictionary(g => g.Key, g => new Queue<EditorNoteSnapshot>(g));
         foreach (var (record, note) in records.Where(r => r.IsExTap).Zip(notes))

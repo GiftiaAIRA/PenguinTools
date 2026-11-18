@@ -71,6 +71,7 @@ public static class MsgKeys
     public const string Warn_Invalid_metadata = "diag.warn.invalid_metadata";
     public const string Warn_Roundtrip_metadata_ignored = "diag.warn.roundtrip_metadata_ignored";
     public const string Warn_Roundtrip_metadata_not_saved = "diag.warn.roundtrip_metadata_not_saved";
+    public const string Warn_Ex_tap_roles_not_restored = "diag.warn.ex_tap_roles_not_restored";
     public const string Error_Command_failed = "diag.error.command_failed";
     public const string Error_Effect_file_not_found = "diag.error.effect_file_not_found";
     public const string Error_File_ignored_due_to_id_missing = "diag.error.file_ignored_due_to_id_missing";

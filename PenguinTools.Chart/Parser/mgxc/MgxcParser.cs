@@ -207,7 +207,11 @@ public partial class MgxcParser
         _curves.Apply(Mgxc, _notePayload.ToArray());
         EditorNumbers.Restore(Mgxc);
         MgxcNoteRoles.Restore(_notePayload.ToArray(), Mgxc.Extras.MgxcNoteSnapshots,
-            Mgxc.Notes.Children.OfType<UmgrModel.ExTap>());
+            Mgxc.Notes.Children.OfType<UmgrModel.ExTap>(), _version);
+        if (!NativeExTapRoles.Restore(Mgxc, _copyright))
+        {
+            Diagnostic.Report(new Diagnostic(Severity.Warning, Msg.Key(MsgKeys.Warn_Ex_tap_roles_not_restored)));
+        }
         Mgxc.Extras.CheckEventView(Mgxc);
         var post = new ChartPostProcessor(Mgxc, Diagnostic, Assets);
         post.Run();
