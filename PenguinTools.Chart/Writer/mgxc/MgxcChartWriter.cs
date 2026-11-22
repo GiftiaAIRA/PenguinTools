@@ -613,7 +613,7 @@ public sealed class MgxcChartWriter(MgxcWriteRequest request)
         _chart.Extras.AirAppearances.Add(new AirAppearance(ChartExtras.AirKey(airHold), airHold.Color, airHold.Direction));
         WriteAirBase(bw, airHold.Direction, airHold.Color, airHold);
         WriteNote(bw, new NoteFormat(NoteType.AirHold, LongAttr.Begin, Direction.Up, AirEx(airHold.Color), 0),
-            new NotePosition(airHold.Lane, airHold.Width, DefaultHeight, airHold.Tick.Original, airHold.Timeline));
+            new NotePosition(airHold.Lane, airHold.Width, AirHoldHeight(airHold.Height), airHold.Tick.Original, airHold.Timeline));
 
         var airHoldJoints =
             airHold.Children.OfType<UmgrModel.AirHoldJoint>().ToArray();
@@ -625,7 +625,7 @@ public sealed class MgxcChartWriter(MgxcWriteRequest request)
             WriteNote(bw, new NoteFormat(NoteType.AirHold, SlideAttr(
                     joint.Joint,
                     i == airHoldJoints.Length - 1), Direction.None, ExAttr.None, 0),
-            new NotePosition(airHold.Lane, airHold.Width, DefaultHeight, joint.Tick.Original, joint.Timeline));
+                new NotePosition(airHold.Lane, airHold.Width, AirHoldHeight(joint.Height), joint.Tick.Original, joint.Timeline));
         }
     }
 
@@ -796,6 +796,8 @@ public sealed class MgxcChartWriter(MgxcWriteRequest request)
     };
 
     private static int Height(decimal value) => (int)Math.Round(value);
+
+    private static int AirHoldHeight(decimal value) => Height(Math.Clamp(value, 0, ushort.MaxValue));
 
     private static int DifficultyValue(Difficulty d) => d switch
     {

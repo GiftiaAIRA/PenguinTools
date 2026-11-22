@@ -41,7 +41,11 @@ MGXC heights use `HSCL` (default 1) to convert to internal tenths. MGXC v4 limit
 
 C2S widths are normalized to 1–16 before paths and AIR parents are matched, so zero-width clipping points become one lane wide. In MGXC and UGC input, notes narrower than one lane are widened with `diag.warn.note_width_adjusted`; zero-width SLIDE and AIR-SLIDE clipping points are kept.
 
-C2S `ASO`, `HHD`, and `HHX` objects are not supported. They are skipped with `diag.c2s.unsupported_note_type` warnings; conversion continues with the remaining objects.
+MGXC round trips retain AIR-HOLD head and joint heights. C2S encodes AIR-HOLD with a custom height as a same-lane AIR-SLIDE with the original heights and action points.
+
+C2S reads and writes `ASO`, `HHD`, and `HHX`, including AIR attachments. Conversion to MGXC or UGC reports an error because those formats have no equivalent notes.
+
+C2S import reports invalid `PROGJUDGE_BPM`, `PROGJUDGE_AER`, and `TUTORIAL` values at their source lines. C2S export validates the quantized BPM timeline before writing, including a starting tempo, positive finite BPMs, and finite chart times.
 
 UGC output uses `HIPRECISION` (internal heights 0–1295) and silently clamps unencodable heights, keeping their originals in validated metadata. `legacy` and `standard` MGXC output clamp heights to 0–65535 the same way; `extended` MGXC stores signed 32-bit heights.
 

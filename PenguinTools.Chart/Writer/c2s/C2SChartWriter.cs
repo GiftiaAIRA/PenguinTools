@@ -45,8 +45,11 @@ public partial class C2SChartWriter
                 return OperationResult.Failure().WithDiagnostics(Diagnostic);
             }
 
-            var text = FinalizeChartText(sb.ToString());
-            text = FormatForGame(text);
+            var text = FormatForGame(FinalizeChartText(sb.ToString()));
+            if (text is null)
+            {
+                return OperationResult.Failure().WithDiagnostics(Diagnostic);
+            }
             await AtomicFile.WriteAsync(OutPath, async (stream, token) =>
             {
                 await using var writer = new StreamWriter(stream, new UTF8Encoding(false, true), leaveOpen: true);
@@ -129,8 +132,7 @@ public partial class C2SChartWriter
     {
         text = RestoreSourceHeaders(text);
         text = Chart.Extras.RestoreSourceOrder(text, Resolution);
-        var unchanged = Chart.Extras.SourceKey == GetContentKey(Chart);
-        if (unchanged && Chart.Extras.SourceStatistics.Count > 0)
+        if (Chart.Extras.SourceStatistics.Count > 0 && Chart.Extras.SourceKey is { } sourceKey && sourceKey == GetContentKey(Chart))
         {
             text += "\n" + string.Join("\n", Chart.Extras.SourceStatistics) + "\n";
         }
@@ -139,7 +141,7 @@ public partial class C2SChartWriter
             (Chart.Extras.SourceKey is null || !Chart.Extras.BinarySnapshotValid || !Chart.Extras.HasSpeedSnapshot))
         {
             Chart.Extras.Resolution = Resolution;
-            text = Chart.Extras.FinalizeText(Chart, text);
+            text = Chart.Extras.FinalizeText(Chart, text, calculateJudgeCounts: false);
         }
         return text;
     }

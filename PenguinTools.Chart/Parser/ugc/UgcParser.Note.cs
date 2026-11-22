@@ -8,6 +8,8 @@ namespace PenguinTools.Chart.Parser.ugc;
 
 public partial class UgcParser
 {
+    private readonly Dictionary<(int Tick, int Lane, int Width), UmgrModel.PositiveNote> _positiveNotes = [];
+
     private void DispatchBodyLine(string line)
     {
         if (!line.StartsWith('#'))
@@ -149,6 +151,7 @@ public partial class UgcParser
         }
 
         Ugc.Notes.AppendChild(note);
+        RememberPositiveNote(note);
         _lastParentNote = note;
         _lastNote = note;
     }
@@ -284,7 +287,6 @@ public partial class UgcParser
         _lastNote = crash;
     }
 
-    // Last PositiveNote at absTick when _lastNote is a non-positive long parent (Hold/Slide).
     private UmgrModel.PositiveNote? FindPairPositive(int absTick, int lane, int width)
     {
         if (_lastNote is UmgrModel.PositiveNote lastP && lastP.Tick.Original == absTick && lastP.Lane == lane && lastP.Width == width)
@@ -292,7 +294,16 @@ public partial class UgcParser
             return lastP;
         }
 
-        return Ugc.Notes.Children.SelectMany(n => new[] { n }.Concat(n.Children)).OfType<UmgrModel.PositiveNote>().LastOrDefault(p => p.Tick.Original == absTick && p.Lane == lane && p.Width == width);
+        return _positiveNotes.GetValueOrDefault((absTick, lane, width));
+    }
+
+    private void RememberPositiveNote(UmgrModel.Note note)
+    {
+        if (note is UmgrModel.PositiveNote positive)
+        {
+            // Children attach to the latest parent. AIR roots do not supply positive notes.
+            _positiveNotes[(positive.Tick.Original, positive.Lane, positive.Width)] = positive;
+        }
     }
 
     private AirLadderAttr ParseAirLadderAttribute(string extras)
@@ -358,6 +369,7 @@ public partial class UgcParser
                 Timeline = _currentTimeline
             };
             hold.AppendChild(hj);
+            RememberPositiveNote(hj);
             _lastNote = hj;
             return true;
         }
@@ -491,6 +503,7 @@ public partial class UgcParser
             joint.NoLine = slide.NoLine;
         }
         _lastParentNote.AppendChild(child);
+        RememberPositiveNote(child);
         _lastNote = child;
     }
 

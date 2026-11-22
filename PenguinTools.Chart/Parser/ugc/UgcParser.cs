@@ -103,6 +103,7 @@ public partial class UgcParser
         MediaValidator = mediaValidator;
         Path = request.Path;
         Content = request.Content;
+        ForC2sExport = request.ForC2sExport;
         Assets = request.Assets;
         Ugc.Meta.ExVersion = 0;
         Ugc.Meta.ExLongEnabled = false;
@@ -112,6 +113,7 @@ public partial class UgcParser
     private DiagnosticCollector Diagnostic { get; } = new();
     private string Path { get; }
     private string? Content { get; }
+    private bool ForC2sExport { get; }
     private AssetManager Assets { get; }
     private List<Task> Tasks { get; } = [];
     private UmgrModel.Chart Ugc { get; } = new();
@@ -176,7 +178,7 @@ public partial class UgcParser
                 Diagnostic.Report(new Diagnostic(Severity.Warning, Msg.Key(MsgKeys.Warn_Ex_tap_roles_not_restored)));
             }
             var post = new ChartPostProcessor(Ugc, Diagnostic, Assets);
-            post.Run();
+            post.Run(ForC2sExport);
             var eligible = Ugc.Extras.BinarySnapshotValid ? null : matches.Keys.SelectMany(n => new[] { n }.Concat(n.Children)).ToHashSet();
             if (Ugc.Extras.BinarySnapshotValid || matches.Count > 0)
             {
@@ -189,8 +191,14 @@ public partial class UgcParser
 
             Ugc.Extras.SpeedModelKey = ChartExtras.SpeedKey(Ugc);
             Ugc.Extras.ParsedEventModelKey = C2SRoundTrip.OrderedViewHash(ChartExtras.EventView(Ugc).Split('\n'));
-            Ugc.Extras.AirModelKey = C2sRoundTripKeys.FormatAirEditKey(Ugc);
-            Ugc.Extras.SlaModelKey = C2sRoundTripKeys.FormatSlaEditKey(Ugc);
+            if (!ForC2sExport || Ugc.Meta.C2sAirSnapshot is not null)
+            {
+                Ugc.Extras.AirModelKey = C2sRoundTripKeys.FormatAirEditKey(Ugc);
+            }
+            if (!ForC2sExport || Ugc.Meta.C2sSlaSnapshot is not null || Ugc.Extras.UgcSlaKey is not null)
+            {
+                Ugc.Extras.SlaModelKey = C2sRoundTripKeys.FormatSlaEditKey(Ugc);
+            }
             Ugc.Extras.CheckLegacyColors(Ugc, capture: true);
             ValidateSlaSnapshot(slaValid);
             ProcessMeta();
@@ -249,7 +257,7 @@ public partial class UgcParser
     {
         // Restore extension defaults first; native fields take precedence
         // even when an editor moves COPYRIGHT to the end of the header.
-        foreach (var line in lines.OrderBy(line =>
+        foreach (var line in lines.Where(line => line.Text.StartsWith('@')).OrderBy(line =>
                      line.Text.Split('\t')[0].ToUpperInvariant() switch
                      {
                          "@COPYRIGHT" => 0,
@@ -259,10 +267,7 @@ public partial class UgcParser
         {
             ct.ThrowIfCancellationRequested();
             SetCurrentLine(line);
-            if (line.Text.StartsWith('@'))
-            {
-                DispatchHeaderLine(line.Text);
-            }
+            DispatchHeaderLine(line.Text);
         }
 
         ClearCurrentLine();
@@ -274,11 +279,17 @@ public partial class UgcParser
         Diagnostic.TimeCalculator = Ugc.GetCalculator();
 
         NormalizeLegacyAirHoldBlocks(lines);
+        _positiveNotes.Clear();
+        foreach (var parent in Ugc.Notes.Children)
+        {
+            RememberPositiveNote(parent);
+            foreach (var child in parent.Children)
+            {
+                RememberPositiveNote(child);
+            }
+        }
         _currentTimeline = 0;
-        // Restore extension defaults first; native fields take precedence
-        // even when an editor moves COPYRIGHT to the end of the header.
-        foreach (var line in lines.OrderBy(line =>
-                     line.Text.Split('\t')[0].Equals("@COPYRIGHT", StringComparison.OrdinalIgnoreCase) ? 0 : 1))
+        foreach (var line in lines)
         {
             ct.ThrowIfCancellationRequested();
             SetCurrentLine(line);
@@ -302,6 +313,10 @@ public partial class UgcParser
         if (text.Contains('\''))
         {
             _sourceRoots.Add(_lastNote);
+        }
+        if (Ugc.Extras.UgcSnapshotVersion != 2)
+        {
+            return;
         }
         _snapshots.HeightDigits = HeightDigits;
         if (!text.Contains('\''))
@@ -419,6 +434,10 @@ public partial class UgcParser
             next.Tick = accum;
         }
 
+        // Accumulation includes every declared meter, while lookups use the
+        // first declaration at a given bar, including when a default was added.
+        _beatAxis = Ugc.Events.Children.OfType<UmgrModel.BeatEvent>()
+            .GroupBy(beat => beat.Bar).Select(group => group.First()).OrderBy(beat => beat.Bar).ToArray();
         foreach (var (bar, tick, bpm) in _pendingBpms)
         {
             Ugc.Events.AppendChild(new UmgrModel.BpmEvent { Tick = BarTickToAbsTick(bar, tick), Bpm = bpm });

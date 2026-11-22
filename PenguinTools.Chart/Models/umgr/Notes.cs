@@ -246,6 +246,8 @@ public enum CurveInterpretation
 // Lane, width, and tick come from the paired note; assignments are ignored.
 public class AirHold : NegativeNote
 {
+    internal const decimal DefaultHeight = 80;
+    internal decimal Height { get; set; } = DefaultHeight;
     public Color Color { get; set; }
     public AirDirection Direction { get; set; } = AirDirection.IR;
 
@@ -282,7 +284,8 @@ public class AirHold : NegativeNote
         {
             Timeline = Timeline,
             Tick = Tick,
-            Joint = Joint.C
+            Joint = Joint.C,
+            Height = Height
         };
         child.MakeVirtual(this);
         return child;
@@ -292,6 +295,7 @@ public class AirHold : NegativeNote
 // Lane and width come from the parent; assignments are ignored.
 public class AirHoldJoint : Note
 {
+    internal decimal Height { get; set; } = AirHold.DefaultHeight;
     public Joint Joint { get; set; } = Joint.D;
 
     public override int Lane
