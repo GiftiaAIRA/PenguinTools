@@ -93,6 +93,7 @@ public sealed class C2sNativeWidthSchedulingTests
     public async Task Writer_UsesNativeWidthsWithoutEditingTheSource()
     {
         var chart = new C.Chart();
+        chart.Events.Add(new C.Bpm { Tick = 0, Value = 120 });
         var slide = new C.Slide { Width = 0, EndWidth = 17, EndTick = 480, Joint = Joint.D };
         chart.Notes.Add(slide);
         var path = TestTempPaths.Create(".c2s");
